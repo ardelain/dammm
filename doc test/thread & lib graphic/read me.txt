@@ -1,0 +1,9 @@
+dans terminal :
+cp -r graphic /tmp 
+
+export LD_LIBRARY_PATH="LD_LIBRARY_PATH:/tmp/graphic/usr/lib" 
+
+make
+
+
+

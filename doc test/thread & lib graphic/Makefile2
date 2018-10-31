@@ -1,0 +1,13 @@
+all : test
+
+test.o: test.c
+	gcc -c test2.c -I/tmp/graphic/usr/include/ -o test.o
+
+test: test.o
+	gcc -D_REENTRANT -o test2 test2.o -L/tmp/graphic/usr/lib -lgraphic -lX11 -lpthread -lrt
+
+clean:
+	rm -f *.o test2
+
+tgz:
+	tar cvzf src.tgz test2.c Makefile
