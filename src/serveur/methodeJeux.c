@@ -68,7 +68,7 @@ void main(int argc, char const *argv[])
 
 			choix = deplacerAuto(&jeu, client1);
 			if(choix == 0){
-				printf("\nDéplacement automatique effectué car vous pouviez manger un pion !\n");
+				printf("\nDéplacement automatique effectué car vous pouviez manger un pion !\n\n");
 			}
 
 			else{
@@ -78,14 +78,16 @@ void main(int argc, char const *argv[])
 		choix = 1;
 		afficher(&jeu);
 
-		// while(choix != 0){
-		// 	choix = deplacerPion(&jeu, client1);
-		// }
-		// choix = 1;
-		// afficher(&jeu);
-
 		while(choix != 0){
-			choix = deplacerPion(&jeu, client2);
+
+			choix = deplacerAuto(&jeu, client2);
+			if(choix == 0){
+				printf("\nDéplacement automatique effectué car vous pouviez manger un pion !\n\n");
+			}
+
+			else{
+				choix = deplacerPion(&jeu, client2);
+			}
 		}
 		choix = 1;
 		afficher(&jeu);
@@ -103,28 +105,6 @@ void misEnPlaceJeu(/*Client client1, Client client2, */Jeu *jeu){
 	for(i = 0; i < 10; i++){
 		for(j = 0; j < 10; j++){
 
-			// //s'il y a une pièce du joueur 1
-			// if((j == 1 || j == 3) && (i == 0 || i == 2 || i == 4 || i == 6 || i == 8)){
-			// 	(*jeu).tabJeu[i][j].isuse = 1;
-			// 	(*jeu).tabJeu[i][j].piece.numero = 1;
-			// }
-			// else if((j == 0 || j == 2) && (i == 1 || i == 3 || i == 5 || i == 7 || i == 9)){
-			// 	(*jeu).tabJeu[i][j].isuse = 1;
-			// 	(*jeu).tabJeu[i][j].piece.numero = 1;
-			// }
-
-			// //s'il y a une pièce du joueur 2
-			// else if((j == 6 || j == 8) && (i == 1 || i == 3 || i == 5 || i == 7 || i == 9)){
-			// 	(*jeu).tabJeu[i][j].isuse = 1;
-			// 	(*jeu).tabJeu[i][j].piece.numero = 2;
-			// }
-			// else if((j == 7 || j == 9) && (i == 0 || i == 2 || i == 4 || i == 6 || i == 8)){
-			// 	(*jeu).tabJeu[i][j].isuse = 1;
-			// 	(*jeu).tabJeu[i][j].piece.numero = 2;
-			// }
-			// else (*jeu).tabJeu[i][j].isuse = 0;
-
-
 			if((i == 1 || i == 3 || i == 5 || i == 7 || i == 9)){
 				if(j == 1 || j == 3){
 					(*jeu).tabJeu[i][j].isuse = 1;
@@ -134,7 +114,10 @@ void misEnPlaceJeu(/*Client client1, Client client2, */Jeu *jeu){
 					(*jeu).tabJeu[i][j].isuse = 1;
 					(*jeu).tabJeu[i][j].piece.numero = 2;
 				}
-				else (*jeu).tabJeu[i][j].isuse = 0;
+				else{
+					(*jeu).tabJeu[i][j].isuse = 2;
+					(*jeu).tabJeu[i][j].piece.numero = 0;
+				}
 			}
 
 			else if(i == 0 || i == 2 || i == 4 || i == 6 || i == 8){
@@ -147,7 +130,7 @@ void misEnPlaceJeu(/*Client client1, Client client2, */Jeu *jeu){
 					(*jeu).tabJeu[i][j].piece.numero = 2;
 				}
 				else {
-					(*jeu).tabJeu[i][j].isuse = 0;
+					(*jeu).tabJeu[i][j].isuse = 2;
 					(*jeu).tabJeu[i][j].piece.numero = 0;
 				}
 			}
@@ -181,14 +164,6 @@ void afficher(Jeu *jeu){
 		printf("|");
 	}
 	printf("\n");
-
-
-	// for(i = 0; i < 10; i++){
-	// 	for(j = 0; j < 10; j++){
-	// 		(*jeu).tabJeu[i][j].x = i;
-	// 		(*jeu).tabJeu[i][j].y = j;
-	// 	}
-	// }
 }
 
 int nbPionClient(Jeu *jeu, Client c){
@@ -208,19 +183,31 @@ int nbPionClient(Jeu *jeu, Client c){
 	return nbPion;
 }
 
-int rechercherPion(Jeu *jeu, int x, int y, int numC){
+int rechercherPionJoueur(Jeu *jeu, int x, int y, int numC){
 
 	int i;
 
-	if(((*jeu).tabJeu[x][y].isuse != 1) && ((*jeu).tabJeu[x][y].isuse != 0)){
-		printf("\nErreur Jeton hors du plateau\n");
-		exit(1);
+	if(((*jeu).tabJeu[x][y].isuse == 1) && ((*jeu).tabJeu[x][y].piece.numero == numC)){
+		return 0;
 	}
 
-	if((*jeu).tabJeu[x][y].isuse == 1){
-			return 0;
+	else if (((*jeu).tabJeu[x][y].isuse == 1) && ((*jeu).tabJeu[x][y].piece.numero != numC))
+	{
+		return 2;
 	}
+
 	return 1;
+}
+
+int rechercherPionPlateau(Jeu *jeu, int x, int y, int numC){
+
+	int i;
+
+	if(((*jeu).tabJeu[x][y].isuse != 1) && ((*jeu).tabJeu[x][y].isuse != 2)){
+		return 1;
+	}
+
+	return 0;
 }
 
 //contrôle que la case vers où va le pion est libre pour le Joueur1 et le Joueur2
@@ -258,132 +245,165 @@ int caseIsLibreManger(Jeu *jeu, int numC, int x1, int x2, int y1, int y2, int *x
 		*x3 = x2+1;
 		*y3 = y2-1;
 	}
-	printf("%d  %d\n", *x3, *y3);
-	p=rechercherPion(jeu, *x3, *y3, numC);
+	p=rechercherPionPlateau(jeu, *x3, *y3, numC);
+	if(p == 1){
+		return 1;
+	}
+
+	p=rechercherPionJoueur(jeu, *x3, *y3, numC);
 	if(p == 1)
 		return 0;
 	else
 		return 1;
 }
 
-int deplacerPion(Jeu *jeu, Client c){
-	int x1, y1, x2, y2, *x3, *y3, p, d;
+int choisirPositionGauche(){
 
-	printf("\nChoisissez un pion a déplacer :\nDonnez moi sa position x (abscisse) :\n");
-	scanf("%d", &x1);
+	int pos;
+
+	printf("Donnez moi sa position x (abscisse) :\n");
+	scanf("%d", &pos);
+
+	return pos;
+}
+
+int choisirPositionDroite(){
+
+	int pos;
+
 	printf("Donnez moi sa position y (ordonnée) :\n");
-	scanf("%d", &y1);
+	scanf("%d", &pos);
 
-	p=rechercherPion(jeu, x1, y1, c.numero);
-	if(p == 0 && ((*jeu).tabJeu[x1][y1].piece.numero == c.numero)){
-		printf("\nChoisissez une case de destination :\nDonnez moi sa position x (abscisse) :\n");
-		scanf("%d", &x2);
-		printf("Donnez moi sa position y (ordonnée) :\n");
-		scanf("%d", &y2);
+	return pos;
+}
 
-		p=rechercherPion(jeu, x2, y2, c.numero);
+int deplacerPion(Jeu *jeu, Client c){
+	int x1=0, y1=0, x2, y2, *x3, *y3, p, d;
+
+	printf("\nChoisissez un pion a déplacer :\n");
+	x1=choisirPositionGauche();
+	y1=choisirPositionDroite();
+
+	p=rechercherPionPlateau(jeu, x1, y1, c.numero);
+	if(p == 1){
+		printf("\nErreur Jeton hors du plateau\n");
+		return 1;
+	}
+
+	p=rechercherPionJoueur(jeu, x1, y1, c.numero);
+	if(p == 0){
+		printf("\nChoisissez une case de destination :\n");
+		x2=choisirPositionGauche();
+		y2=choisirPositionDroite();
+
+		p=rechercherPionPlateau(jeu, x2, y2, c.numero);
+		if(p == 1){
+			printf("\nErreur Jeton hors du plateau\n");
+			return 1;
+		}
+
+		p=rechercherPionJoueur(jeu, x2, y2, c.numero);
 		if(p == 1){
 			d=deplacement(c.numero, x1, x2, y1, y2);
 			if(d == 1){
 				printf("\nDéplacement non valide !\n\n");
 				return 1;
 			}
-			(*jeu).tabJeu[x1][y1].isuse = 0;
+			(*jeu).tabJeu[x1][y1].isuse = 2;
 			(*jeu).tabJeu[x1][y1].piece.numero = 0;
 			(*jeu).tabJeu[x2][y2].isuse = 1;
 			(*jeu).tabJeu[x2][y2].piece.numero = c.numero;
 			return 0;
 		}
-		else{
-			if((*jeu).tabJeu[x2][y2].piece.numero == c.numero){
-				printf("\nCette case est occupée !\n\n");
-				return 1;
+		else if(p == 2){
+			p=caseIsLibreManger(jeu, c.numero, x1, x2, y1, y2, &x3, &y3);
+			if(p == 0){
+				manger(jeu, c.numero, x1, x2, y1, y2, &x3, &y3);
+				return 0;
 			}
 			else{
-				p=caseIsLibreManger(jeu, c.numero, x1, x2, y1, y2, &x3, &y3);
-				if(p == 0){
-					manger(jeu, c.numero, x1, x2, y1, y2, &x3, &y3);
-					return 0;
-				}
-				else{
-					printf("\nDéplacement impossible !\n");
-					return 1;
-				}
+				printf("\nDéplacement impossible !\n");
+				return 1;
 			}
 		}
+		else{
+			printf("\nCette case est occupée !\n\n");
+			return 1;
+		}
 	}
-	else
+	else{
 		printf("Ce n'est pas votre pion !\n");
+		return 1;
+	}
 }
 
 void manger(Jeu *jeu, int numC, int x1, int x2, int y1, int y2, int *x3, int *y3){
 
-	(*jeu).tabJeu[x1][y1].isuse = 0;
+	(*jeu).tabJeu[x1][y1].isuse = 2;
 	(*jeu).tabJeu[x1][y1].piece.numero = 0;
-	(*jeu).tabJeu[x2][y2].isuse = 0;
+	(*jeu).tabJeu[x2][y2].isuse = 2;
 	(*jeu).tabJeu[x2][y2].piece.numero = 0;
 	(*jeu).tabJeu[*x3][*y3].isuse = 1;
 	(*jeu).tabJeu[*x3][*y3].piece.numero = numC;
 }
 
+int mangerAuto(Jeu *jeu, int x1, int x2, int y1, int y2, int numC){
+
+	int p, *x3, *y3;
+
+	if((*jeu).tabJeu[x2][y2].piece.numero == 1 || (*jeu).tabJeu[x2][y2].piece.numero == 2){
+		if((*jeu).tabJeu[x2][y2].isuse == 1 && (*jeu).tabJeu[x2][y2].piece.numero != c.numero){
+			p=caseIsLibreManger(jeu, c.numero, x1, x2, y1, y2, &x3, &y3);
+			if(p == 0){
+				manger(jeu, c.numero, x1, x2, y1, y2, &x3, &y3);
+				return 0;
+			}
+		}
+	}
+
+	return 1;
+}
+
 int deplacerAuto(Jeu *jeu, Client c){
 
-	int i, j, p, x1, x2, *x3, y1, y2, *y3;
+	int i, j, p, x1, x2, y1, y2;
 
 	for(i = 0; i < 10; i++){
 		for(j = 0; j < 10; j++){
 			if((*jeu).tabJeu[i][j].isuse == 1 && (*jeu).tabJeu[i][j].piece.numero == c.numero){
 				x1 = i;
 				y1 = j;
+
 				x2 = x1-1;
 				y2 = y1+1;
-				if(((*jeu).tabJeu[x2][y2].isuse != 1) && ((*jeu).tabJeu[x2][y2].isuse != 0)){
-					if((*jeu).tabJeu[x2][y2].isuse == 1 && (*jeu).tabJeu[x2][y2].piece.numero != c.numero){
-						p=caseIsLibreManger(jeu, c.numero, x1, x2, y1, y2, &x3, &y3);
-						if(p == 0){
-							manger(jeu, c.numero, x1, x2, y1, y2, &x3, &y3);
-							return 0;
-						}
-					}
+				p=mangerAuto(jeu, x1, x2, y1, y2, c.numero);
+				if (p == 0)
+				{
+					return 0;
 				}
 
 				x2 = x1+1;
 				y2 = y1+1;
-
-				if(((*jeu).tabJeu[x2][y2].isuse != 1) && ((*jeu).tabJeu[x2][y2].isuse != 0)){
-					if((*jeu).tabJeu[x2][y2].isuse == 1 && (*jeu).tabJeu[x2][y2].piece.numero != c.numero){
-						p=caseIsLibreManger(jeu, c.numero, x1, x2, y1, y2, &x3, &y3);
-						if(p == 0){
-							manger(jeu, c.numero, x1, x2, y1, y2, &x3, &y3);
-							return 0;
-						}
-					}
+				p=mangerAuto(jeu, x1, x2, y1, y2, c.numero);
+				if (p == 0)
+				{
+					return 0;
 				}
 
 				x2 = x1-1;
 				y2 = y1-1;
-
-				if(((*jeu).tabJeu[x2][y2].isuse != 1) && ((*jeu).tabJeu[x2][y2].isuse != 0)){
-					if((*jeu).tabJeu[x2][y2].isuse == 1 && (*jeu).tabJeu[x2][y2].piece.numero != c.numero){
-						p=caseIsLibreManger(jeu, c.numero, x1, x2, y1, y2, &x3, &y3);
-						if(p == 0){
-							manger(jeu, c.numero, x1, x2, y1, y2, &x3, &y3);
-							return 0;
-						}
-					}
+				p=mangerAuto(jeu, x1, x2, y1, y2, c.numero);
+				if (p == 0)
+				{
+					return 0;
 				}
 
 				x2 = x1+1;
 				y2 = y1-1;
-
-				if(((*jeu).tabJeu[x2][y2].isuse != 1) && ((*jeu).tabJeu[x2][y2].isuse != 0)){
-					if((*jeu).tabJeu[x2][y2].isuse == 1 && (*jeu).tabJeu[x2][y2].piece.numero != c.numero){
-						p=caseIsLibreManger(jeu, c.numero, x1, x2, y1, y2, &x3, &y3);
-						if(p == 0){
-							manger(jeu, c.numero, x1, x2, y1, y2, &x3, &y3);
-							return 0;
-						}
-					}
+				p=mangerAuto(jeu, x1, x2, y1, y2, c.numero);
+				if (p == 0)
+				{
+					return 0;
 				}
 			}
 
