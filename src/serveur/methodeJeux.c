@@ -1,8 +1,9 @@
-#include<stdio.h>
-#include<string.h>
-#include<stdlib.h>
+#include <stdio.h>
+#include <string.h>
+#include <stdlib.h>
 #include <sys/socket.h>
 #include <errno.h>
+#include <ctype.h>
 
 typedef struct Client
 {
@@ -257,28 +258,59 @@ int caseIsLibreManger(Jeu *jeu, int numC, int x1, int x2, int y1, int y2, int *x
 		return 1;
 }
 
+void vider_buffer(void)
+{
+    int c;
+  
+    do {
+        c = getchar();
+    } while (c != '\n' && c != EOF);
+}
+
 int choisirPositionGauche(){
 
-	int pos;
+	vider_buffer();
+
+	char pos=""; 
+	int valeur;
 
 	printf("Donnez moi sa position x (abscisse) :\n");
-	scanf("%d", &pos);
+	scanf("%c", &pos);
 
-	return pos;
+	while(sscanf(&pos, "%d", &valeur) != 1){
+		printf("\nEntrez un int pour continuer\n");
+		vider_buffer();
+		
+		printf("Donnez moi sa position x (abscisse) :\n");
+		scanf("%c", &pos);
+	}
+
+	return valeur;
 }
 
 int choisirPositionDroite(){
 
-	int pos;
+	vider_buffer();
+
+	char pos=""; 
+	int valeur;
 
 	printf("Donnez moi sa position y (ordonnée) :\n");
-	scanf("%d", &pos);
+	scanf("%c", &pos);
 
-	return pos;
+	while(sscanf(&pos, "%d", &valeur) != 1){
+		printf("\nEntrez un int pour continuer\n");
+		vider_buffer();
+		
+		printf("Donnez moi sa position y (ordonnée) :\n");
+		scanf("%c", &pos);
+	}
+
+	return valeur;
 }
 
 int deplacerPion(Jeu *jeu, Client c){
-	int x1=0, y1=0, x2, y2, *x3, *y3, p, d;
+	int x1=0, y1=0, x2, y2, *x3, *y3, p, d, i;
 
 	printf("\nChoisissez un pion a déplacer :\n");
 	x1=choisirPositionGauche();
@@ -287,7 +319,6 @@ int deplacerPion(Jeu *jeu, Client c){
 	p=rechercherPionPlateau(jeu, x1, y1, c.numero);
 	if(p == 1){
 		printf("\nErreur Jeton hors du plateau\n");
-		return 1;
 	}
 
 	p=rechercherPionJoueur(jeu, x1, y1, c.numero);
@@ -352,10 +383,10 @@ int mangerAuto(Jeu *jeu, int x1, int x2, int y1, int y2, int numC){
 	int p, *x3, *y3;
 
 	if((*jeu).tabJeu[x2][y2].piece.numero == 1 || (*jeu).tabJeu[x2][y2].piece.numero == 2){
-		if((*jeu).tabJeu[x2][y2].isuse == 1 && (*jeu).tabJeu[x2][y2].piece.numero != c.numero){
-			p=caseIsLibreManger(jeu, c.numero, x1, x2, y1, y2, &x3, &y3);
+		if((*jeu).tabJeu[x2][y2].isuse == 1 && (*jeu).tabJeu[x2][y2].piece.numero != numC){
+			p=caseIsLibreManger(jeu, numC, x1, x2, y1, y2, &x3, &y3);
 			if(p == 0){
-				manger(jeu, c.numero, x1, x2, y1, y2, &x3, &y3);
+				manger(jeu, numC, x1, x2, y1, y2, &x3, &y3);
 				return 0;
 			}
 		}
