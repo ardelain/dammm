@@ -1,0 +1,5 @@
+all:test
+	gcc -o cerveur serveur.c -lpthread
+
+clean: 
+	rm -f *.o serveur

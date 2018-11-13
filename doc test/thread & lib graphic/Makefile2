@@ -1,7 +1,7 @@
 all : test
 
 test.o: test.c
-	gcc -c test2.c -I/tmp/graphic/usr/include/ -o test.o
+	gcc -c test2.c -I/tmp/graphic/usr/include/ -o test2.o
 
 test: test.o
 	gcc -D_REENTRANT -o test2 test2.o -L/tmp/graphic/usr/lib -lgraphic -lX11 -lpthread -lrt
