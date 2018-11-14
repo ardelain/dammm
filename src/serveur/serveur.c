@@ -663,6 +663,16 @@ Jeu getJeu(char nom[30]){
    	}
    	return j;
 }
+int getJeuInt(char nom[30]){
+	int i;
+	Jeu j;
+   	for(i = 0;i<nbJeux;i++){
+  		if(strcmp(nom,jeux[i].client1.nom)==0 || strcmp(nom,jeux[i].client2.nom)==0){
+   				return i;
+  		}
+   	}
+   	return -1;
+}
 void afficher(Jeu *jeu){
 	int i, j, k;
 	printf("   ");
@@ -989,6 +999,10 @@ void *clientThread(void *socket_c){//struct sockaddr_in src_addr
 			    }
 			  	return;
 		}
+		char ss[5]; // Nombre maximal de chiffres + 1
+					sprintf(ss, "%d", elClient.isinGame);
+					puts(elClient.nom);
+					puts(ss);
 		if(elClient.isinGame == 1){
 			if(strcmp(request,"jeu") == 0){
 				Jeu jeu = getJeu(elClient.nom);
@@ -998,12 +1012,15 @@ void *clientThread(void *socket_c){//struct sockaddr_in src_addr
 				Jeu jeu = getJeu(elClient.nom);
 			    envoyerStrucJeu(sock,jeu);
 			}else if(strcmp(request,"ojeu") == 0){
+				puts("ojeu1");
 				Jeu jeu = getJeu(elClient.nom);
 				char ct[REQUEST_MAX]="Tour au joueur adverse";
 				if(jeu.tour == 1){ //on verifie que c'est bien son tour
 					if(strcmp(elClient.nom,jeu.client1.nom)==0){
-						jeu = recupererJeu(sock);
-			    		envoyerStrucJeu(socketAutreClientJeu(jeu,elClient.nom),jeu);
+						jeux[getJeuInt(elClient.nom)] = recupererJeu(sock);
+						jeux[getJeuInt(elClient.nom)].tour = 2;
+			    		envoyerStrucJeu(socketAutreClientJeu(jeux[getJeuInt(elClient.nom)],elClient.nom),jeux[getJeuInt(elClient.nom)]);///jeux[getJeuInt(elClient.nom)].client2.addr
+					//..........................................................................................................
 					}else{
 						puts("Mauvais Tour");
 						if(send(sock , ct, REQUEST_MAX , 0)==-1) {
@@ -1011,9 +1028,11 @@ void *clientThread(void *socket_c){//struct sockaddr_in src_addr
 						}
 					}
 				}else{
-					if(strcmp(elClient.nom,jeu.client1.nom)==0){
-						jeu = recupererJeu(sock);
-			    		envoyerStrucJeu(socketAutreClientJeu(jeu,elClient.nom),jeu);						
+					if(strcmp(elClient.nom,jeu.client2.nom)==0){
+						jeux[getJeuInt(elClient.nom)] = recupererJeu(sock);
+						jeux[getJeuInt(elClient.nom)].tour = 1;
+			    		envoyerStrucJeu(socketAutreClientJeu(jeux[getJeuInt(elClient.nom)],elClient.nom),jeux[getJeuInt(elClient.nom)]);		
+			    		//..........................................................................................................				
 					}else{
 						puts("Mauvais Tour");
 						if(send(sock , ct, REQUEST_MAX , 0)==-1) {
@@ -1025,17 +1044,21 @@ void *clientThread(void *socket_c){//struct sockaddr_in src_addr
 				//...
 				puts("Mauvaise requete");
 			}
-			//..........................................................................................................
 		}else if(elClient.demandeDeJeu == 1){//jouerAvecJoueur(elClient.socketJDemande,monnom,nom);
 			if(strcmp(request,"oui")==0){//|| request == NULL || sizeof(request) > 1024
 			   		puts(" jouerAvecJoueur ACCEPT ");
-			   		
+
+			   		clients[getClientIt(elClient.nom)].demandeDeJeu = 0; 
 			   		struct source cl;
 
 			   		pthread_t _thread;
 			    	strcpy(cl.nom1 ,elClient.nom);
 			    	strcpy(cl.nom2,elClient.nomDemande);
 
+					char ss[5]; // Nombre maximal de chiffres + 1
+					sprintf(ss, "%d", elClient.isinGame);
+					puts(elClient.nomDemande);
+					puts(ss);
 			    	if( (tabthread[nbClientCo+1]=pthread_create( &_thread , NULL ,  jouer , (void*) &cl) )< 0) //thread inutile ?
 			        {
 			            perror("could not create thread");
@@ -1043,8 +1066,9 @@ void *clientThread(void *socket_c){//struct sockaddr_in src_addr
 			        } //= _thread;
 			        pthread_join (_thread, NULL); 
 			        Jeu jeu = getJeu(elClient.nom);
+			        Client c = getClient(elClient.nomDemande);
 			        envoyerClient(sock,jeu.client1);
-			        envoyerClient(sock,jeu.client2);
+			        envoyerClient(c.addr,jeu.client2);
 			        //afficher(&jeu);
 			        envoyerStrucJeu(sock,jeu);
 

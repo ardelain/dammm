@@ -509,6 +509,7 @@ void *ecouter(void *sock){
 	int s= *(int*)sock;
 	char msg[LINE_MAX];
 	char request[LINE_MAX];
+	int boo=0;
 	while(1){
 		//response[ret]=0;msg[strlen(msg)-1] = '\0';	
 		if((ret=recv(s, request , LINE_MAX , 0))==-1) {
@@ -556,10 +557,14 @@ void *ecouter(void *sock){
 			}else{
 				jeu.tour = 1;
 			}
-			
+			strcpy(msg,"ELTEST");
+			if(send(s , msg , LINE_MAX , 0)==-1) {//pour update le client du serveur
+				perror("sendto"); exit(1);
+			}
 			envoyerStrucJeu(s,jeu);
 			memset(request, 0, LINE_MAX);
 		}
+
    		printf("%s\n",request);
    		//clear the message buffer
 		memset(request, 0, LINE_MAX);
