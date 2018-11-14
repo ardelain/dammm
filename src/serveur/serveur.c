@@ -78,6 +78,13 @@ typedef struct
 }
 Jeu;
 
+struct DeplacementUser{
+	int numJeu;
+	int x1;
+	int y1;
+	int x2;
+	int y2;
+};
 /***************************************************************************************************************************
 	variable
 ***************************************************************************************************************************/
@@ -655,6 +662,305 @@ struct source{
 /***************************************************************************************************************************
 	Jeu
 ***************************************************************************************************************************/
+
+void afficher(Jeu jeu){
+
+	int i, j, k;
+	printf("   ");
+	for(k = 0; k < 10; k++)
+	{
+		printf(" %d", k);
+	}
+	printf("\n");
+
+	for(i = 0; i < 10; i++){
+		printf("\n%d  ", i);
+		for(j = 0; j < 10; j++){
+			if((jeu).tabJeu[i][j].isuse == 1){
+				if((jeu).tabJeu[i][j].piece.numero == 1){
+					// printf("%d %d", i, j);
+					printf("|x");
+				}
+				else if((jeu).tabJeu[i][j].piece.numero == 2) 
+					printf("|o");
+			}
+			else printf("| ");
+		}
+		printf("|");
+	}
+	printf("\n");
+}
+
+int nbPionClient(Jeu *jeu, Client c){
+
+	int i, j, nbPion = 0;
+
+	for(i = 0; i < 10; i++){
+		for(j = 0; j < 10; j++){
+			if((*jeu).tabJeu[i][j].isuse == 1){
+				if((*jeu).tabJeu[i][j].piece.numero == c.numero){
+					nbPion = nbPion +1;
+				}
+			}
+		}
+	}
+
+	return nbPion;
+}
+
+int rechercherPionJoueur(Jeu *jeu, int x, int y, int numC){
+
+	int i;
+	//printf("--->%d %d\n",(*jeu).tabJeu[x][y].piece.numero ,numC);
+	if(((*jeu).tabJeu[x][y].isuse == 1) && ((*jeu).tabJeu[x][y].piece.numero == numC)){
+		return 0;
+	}
+
+	else if (((*jeu).tabJeu[x][y].isuse == 1) && ((*jeu).tabJeu[x][y].piece.numero != numC))
+	{
+		return 2;
+	}
+
+	return 1;
+}
+
+int rechercherPionPlateau(Jeu *jeu, int x, int y, int numC){
+
+	int i;
+
+	if(((*jeu).tabJeu[x][y].isuse != 1) && ((*jeu).tabJeu[x][y].isuse != 2)){
+		return 1;
+	}
+
+	return 0;
+}
+
+//contrôle que la case vers où va le pion est libre pour le Joueur1 et le Joueur2
+int deplacement(int numC, int x1, int x2, int y1, int y2){
+	if(numC == 1){
+		if((x2 == x1-1 && y2 == y1+1) || (x2 == x1+1 && y2 == y1+1))
+			return 0;
+	}
+	if(numC == 2){
+		if((x2 == x1-1 && y2 == y1-1) || (x2 == x1+1 && y2 == y1-1))
+			return 0;
+	}
+	return 1;
+}
+
+//contrôle si la case adjacente au pion est libre
+int caseIsLibreManger(Jeu *jeu, int numC, int x1, int x2, int y1, int y2, int *x3, int *y3){
+
+	int p;
+
+	if(x2 == x1-1 && y2 == y1+1){
+		*x3 = x2-1;
+		*y3 = y2+1;
+	}
+	else if(x2 == x1+1 && y2 == y1+1){
+		*x3 = x2+1;
+		*y3 = y2+1;
+	}
+	
+	else if(x2 == x1-1 && y2 == y1-1){
+		*x3 = x2-1;
+		*y3 = y2-1;
+	}
+	else if(x2 == x1+1 && y2 == y1-1){
+		*x3 = x2+1;
+		*y3 = y2-1;
+	}
+	p=rechercherPionPlateau(jeu, *x3, *y3, numC);
+	if(p == 1){
+		return 1;
+	}
+
+	p=rechercherPionJoueur(jeu, *x3, *y3, numC);
+	if(p == 1)
+		return 0;
+	else
+		return 1;
+}
+
+void vider_buffer(void)
+{
+    int c;
+  
+    do {
+        c = getchar();
+    } while (c != '\n' && c != EOF);
+}
+
+int choisirPositionGauche(){
+
+	vider_buffer();
+
+	char pos=""; 
+	int valeur;
+
+	printf("Donnez moi sa position x (abscisse) :\n");
+	scanf("%c", &pos);
+
+	while(sscanf(&pos, "%d", &valeur) != 1){
+		printf("\nEntrez un int pour continuer\n");
+		vider_buffer();
+		
+		printf("Donnez moi sa position x (abscisse) :\n");
+		scanf("%c", &pos);
+	}
+
+	return valeur;
+}
+
+int choisirPositionDroite(){
+
+	vider_buffer();
+
+	char pos=""; 
+	int valeur;
+
+	printf("Donnez moi sa position y (ordonnée) :\n");
+	scanf("%c", &pos);
+
+	while(sscanf(&pos, "%d", &valeur) != 1){
+		printf("\nEntrez un int pour continuer\n");
+		vider_buffer();
+		
+		printf("Donnez moi sa position y (ordonnée) :\n");
+		scanf("%c", &pos);
+	}
+
+	return valeur;
+}
+
+
+void manger(Jeu *jeu, int numC, int x1, int x2, int y1, int y2, int *x3, int *y3){
+
+	(*jeu).tabJeu[x1][y1].isuse = 2;
+	(*jeu).tabJeu[x1][y1].piece.numero = 0;
+	(*jeu).tabJeu[x2][y2].isuse = 2;
+	(*jeu).tabJeu[x2][y2].piece.numero = 0;
+	(*jeu).tabJeu[*x3][*y3].isuse = 1;
+	(*jeu).tabJeu[*x3][*y3].piece.numero = numC;
+}
+
+int mangerAuto(Jeu *jeu, int x1, int x2, int y1, int y2, int numC){
+
+	int p, *x3, *y3;
+
+	if((*jeu).tabJeu[x2][y2].piece.numero == 1 || (*jeu).tabJeu[x2][y2].piece.numero == 2){
+		if((*jeu).tabJeu[x2][y2].isuse == 1 && (*jeu).tabJeu[x2][y2].piece.numero != numC){
+			p=caseIsLibreManger(jeu, numC, x1, x2, y1, y2, &x3, &y3);
+			if(p == 0){
+				manger(jeu, numC, x1, x2, y1, y2, &x3, &y3);
+				return 0;
+			}
+		}
+	}
+
+	return 1;
+}
+
+int deplacerAuto(Jeu *jeu, Client c){
+
+	int i, j, p, x1, x2, y1, y2;
+
+	for(i = 0; i < 10; i++){
+		for(j = 0; j < 10; j++){
+			if((*jeu).tabJeu[i][j].isuse == 1 && (*jeu).tabJeu[i][j].piece.numero == c.numJeu){
+				x1 = i;
+				y1 = j;
+
+				x2 = x1-1;
+				y2 = y1+1;
+				p=mangerAuto(jeu, x1, x2, y1, y2, c.numJeu);
+				if (p == 0)
+				{
+					return 0;
+				}
+
+				x2 = x1+1;
+				y2 = y1+1;
+				p=mangerAuto(jeu, x1, x2, y1, y2, c.numJeu);
+				if (p == 0)
+				{
+					return 0;
+				}
+
+				x2 = x1-1;
+				y2 = y1-1;
+				p=mangerAuto(jeu, x1, x2, y1, y2, c.numJeu);
+				if (p == 0)
+				{
+					return 0;
+				}
+
+				x2 = x1+1;
+				y2 = y1-1;
+				p=mangerAuto(jeu, x1, x2, y1, y2, c.numJeu);
+				if (p == 0)
+				{
+					return 0;
+				}
+			}
+
+		}
+	}
+
+	return 1;
+}
+
+int deplacerPion(Jeu *jeu, int numJeu,int x1,int y1,int x2,int y2){
+	int *x3, *y3, p, d, i;
+	//printf("deplacerPion->> %d",numJeu);
+	p=rechercherPionPlateau(jeu, x1, y1, numJeu);
+	if(p == 1){
+		printf("\nErreur Jeton hors du plateau\n");
+		return 1;
+	}
+	p=rechercherPionJoueur(jeu, x1, y1, numJeu);
+	if(p == 0){
+		p=rechercherPionPlateau(jeu, x2, y2, numJeu);
+		if(p == 1){
+			printf("\nErreur Jeton hors du plateau\n");
+			return 1;
+		}
+		p=rechercherPionJoueur(jeu, x2, y2, numJeu);
+		if(p == 1){
+			d=deplacement(numJeu, x1, x2, y1, y2);
+			if(d == 1){
+				printf("\nDéplacement non valide !\n\n");
+				return 1;
+			}
+			(*jeu).tabJeu[x1][y1].isuse = 2;
+			(*jeu).tabJeu[x1][y1].piece.numero = 0;
+			(*jeu).tabJeu[x2][y2].isuse = 1;
+			(*jeu).tabJeu[x2][y2].piece.numero = numJeu;
+			return 0;
+		}
+		else if(p == 2){
+			p=caseIsLibreManger(jeu, numJeu, x1, x2, y1, y2, &x3, &y3);
+			if(p == 0){
+				manger(jeu, numJeu, x1, x2, y1, y2, &x3, &y3);
+				return 0;
+			}
+			else{
+				printf("\nDéplacement impossible !\n");
+				return 1;
+			}
+		}
+		else{
+			printf("\nCette case est occupée !\n\n");
+			return 1;
+		}
+	}
+	else{
+		printf("Ce n'est pas votre pion !\n");
+		return 1;
+	}
+}
+
+
 Jeu getJeu(char nom[30]){
 	int i;
 	Jeu j;
@@ -675,6 +981,8 @@ int getJeuInt(char nom[30]){
    	}
    	return -1;
 }
+
+/*
 void afficher(Jeu jeu){
 	int i, j, k;
 	printf("   ");
@@ -701,6 +1009,7 @@ void afficher(Jeu jeu){
 	}
 	printf("\n");
 }
+*/
 
 char * charJeu(Jeu *jeu){
 	char * c;//char *c;
@@ -770,9 +1079,13 @@ void envoyerStrucJeu(int sock, Jeu jeu){
 	}
 }
 
-Jeu recupererJeu(int s){
+
+Jeu recupererJeu(int s,struct DeplacementUser * du){
 	Jeu jeu;
 	int i,j;
+	puts("recup DeplacementUser");
+
+	puts("recup DeplacementUse");
 	if(recv(s , &jeu.client1, sizeof(jeu.client1) , 0)==-1) {
 		perror("recv"); return;//exit(1);
 	}
@@ -787,7 +1100,11 @@ Jeu recupererJeu(int s){
 			if(recv(s ,&jeu.tabJeu[i][j], sizeof(jeu.tabJeu[i][j]) , 0)==-1) {
 				perror("recv"); return;//exit(1);
 			}
+			//printf("%d\n",jeu.tabJeu[i]->piece.numero);
 		}
+	}
+	if(recv(s , du, sizeof(jeu.client1) , 0)==-1) { //A tester !!
+		perror("recv"); return;//exit(1);
 	}
  	afficher(jeu);
  	return jeu;
@@ -914,6 +1231,8 @@ int socketAutreClientJeu(Jeu jeu,char *nom){
 		return jeu.client1.addr;
 	}
 }
+
+
 void *clientThread(void *socket_c){//struct sockaddr_in src_addr
 	int sock = *(int*)socket_c;
 	int ret;
@@ -962,31 +1281,56 @@ void *clientThread(void *socket_c){//struct sockaddr_in src_addr
 			}else if(strcmp(request,"ojeu") == 0){
 				Jeu jeu = getJeu(elClient.nom);
 				char ct[REQUEST_MAX]="Tour au joueur adverse";
-				if(jeu.tour == 1){ //on verifie que c'est bien son tour
+				char cf[REQUEST_MAX]="Vous etes inconnu et/ou frauduleux";
+				char cnom[100];
+				int to;
+				int  boo = 0;
+				char elnom[30];
+				//printf("==========%s\n",elClient.nom);
+				if(jeu.tour == 1){ //on verifie que c'est bien son tour (et si c'est bien lui)
 					if(strcmp(elClient.nom,jeu.client1.nom)==0){
-						jeux[getJeuInt(elClient.nom)] = recupererJeu(sock);
-						jeux[getJeuInt(elClient.nom)].tour = 2;
-			    		envoyerStrucJeu(socketAutreClientJeu(jeux[getJeuInt(elClient.nom)],elClient.nom),jeux[getJeuInt(elClient.nom)]);///jeux[getJeuInt(elClient.nom)].client2.addr
-					//..........................................................................................................
+						to = 2;
+						strcpy(elnom, jeu.client1.nom);
 					}else{
-						puts("Mauvais Tour");
+						printf("(%s) Mauvais Tour\n",elClient.nom);
 						if(send(sock , ct, REQUEST_MAX , 0)==-1) {
-							perror("sendto"); return;//exit(1);
+							perror("sendto"); return;
 						}
+						boo = 1;
 					}
 				}else{
 					if(strcmp(elClient.nom,jeu.client2.nom)==0){
-						jeux[getJeuInt(elClient.nom)] = recupererJeu(sock);
-						jeux[getJeuInt(elClient.nom)].tour = 1;
-			    		envoyerStrucJeu(socketAutreClientJeu(jeux[getJeuInt(elClient.nom)],elClient.nom),jeux[getJeuInt(elClient.nom)]);		
-			    		//..........................................................................................................				
+						to = 1;
+						strcpy(elnom, jeu.client2.nom);
 					}else{
 					    printf("(%s) Mauvais Tour\n",elClient.nom);
 						if(send(sock , ct, REQUEST_MAX , 0)==-1) {
-							perror("sendto"); return;//exit(1);
+							perror("sendto"); return;
+						}
+						boo = 1;
+					}
+				}
+				//printf("======2====%s\n",elClient.nom);
+				if(boo == 0){
+					//printf("=======3===%s\n",elClient.nom);
+					struct DeplacementUser d;
+					Jeu j = recupererJeu(sock,&d);
+					//printf("->%d %d %d %d %d\n", d.numJeu, d.x1, d.y1, d.x2, d.y2);
+					if(deplacerPion(&jeu, d.numJeu, d.x1, d.y1, d.x2, d.y2)!=1){
+						int nn = getJeuInt(j.client1.nom);
+						//printf("ap deplacerPion3 %d %s %s el %cccs\n",nn,elClient.nom,j.client1.nom,elnom);
+						jeux[nn] = jeu;
+						//printf("ap deplacerPion4\n");
+						jeux[getJeuInt(elClient.nom)].tour = to;
+			    		envoyerStrucJeu(socketAutreClientJeu(jeux[getJeuInt(elClient.nom)],elClient.nom),jeux[getJeuInt(elClient.nom)]);
+					}else{
+						printf("(%s) Frauduleux\n",elClient.nom);
+						if(send(sock , cf, REQUEST_MAX , 0)==-1) {
+							perror("sendto"); return;
 						}
 					}
 				}
+
 			}else{
 				printf("(%s) Mauvais requete\n",elClient.nom);
 				//...
@@ -1037,9 +1381,6 @@ void *clientThread(void *socket_c){//struct sockaddr_in src_addr
 
 }
 
-
-
-
 /***************************************************************************************************************************
 	main
 ***************************************************************************************************************************/
@@ -1053,8 +1394,6 @@ int main(int argc, char **argv){
 	puts("============================================");
 	puts("\nClients : ");
 	charge( clients,sizeof(clients),&nbClient ,FICHIER_CLIENT);
-	afficherTtClients();
-
 	int i;
    	for(i = 0;i<nbClient;i++){
    		clients[i].isinGame = 0;
@@ -1062,6 +1401,7 @@ int main(int argc, char **argv){
    		clients[i].isCo = 0;
    	}
    	sauv( clients,sizeof(clients),&nbClient ,FICHIER_CLIENT);
+   	afficherTtClients();
 	puts("============================================\n");
 	//m = PTHREAD_MUTEX_INITIALIZER;
 	struct sockaddr_in  client;
