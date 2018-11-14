@@ -481,19 +481,19 @@ void envoyerStrucJeu(int sock, Jeu jeu){
 	if(send(sock , c, REQUEST_MAX , 0)==-1) {
 		perror("sendto"); return;//exit(1);
 	}
-	sleep(1);
+	sleep (0.1);
 	if(send(sock , &jeu.client1, sizeof(jeu.client1) , 0)==-1) {
 		perror("sendto"); return;//exit(1);
 	}
-	sleep(1);
+	sleep (0.1);
 	if(send(sock , &jeu.client2, sizeof(jeu.client2) , 0)==-1) {
 		perror("sendto"); return;//exit(1);
 	}
-	sleep(1);
+	sleep (0.1);
 	if(send(sock , &jeu.tabP, sizeof(jeu.tabP) , 0)==-1) {
 		perror("sendto"); return;//exit(1);
 	}
-	sleep(1);
+	sleep (0.1);
 	for(i = 0; i < 10; i++){
 		for(j = 0; j < 10; j++){
 			if(send(sock ,&jeu.tabJeu[i][j], sizeof(jeu.tabJeu[i][j]) , 0)==-1) {
@@ -511,6 +511,7 @@ void *ecouter(void *sock){
 	char request[LINE_MAX];
 	int boo=0;
 	while(1){
+	    boo=0;
 		//response[ret]=0;msg[strlen(msg)-1] = '\0';	
 		if((ret=recv(s, request , LINE_MAX , 0))==-1) {
     			perror("recvfrom !"); exit(1);
@@ -529,6 +530,7 @@ void *ecouter(void *sock){
 		if( strncmp(request,"client",10) == 0){ //pour debloquer la boucle principale du serveur
 			recupererClients(s);
 			memset(request, 0, LINE_MAX);
+			boo = 1;
 		}
 		
 		if( strncmp(request,"reception demande de jeu",10) == 0){ //inutile
@@ -537,6 +539,7 @@ void *ecouter(void *sock){
 				perror("sendto"); exit(1);
 			}
 			memset(request, 0, LINE_MAX);
+			boo = 1;
 		}
 		//reception de la structure Jeu
 		if( strncmp(request,"xJeu",10) == 0){ //inutile
@@ -563,12 +566,17 @@ void *ecouter(void *sock){
 			}
 			envoyerStrucJeu(s,jeu);
 			memset(request, 0, LINE_MAX);
+			boo = 1;
 		}
-
-   		printf("%s\n",request);
+        if(boo ==0){
+            printf("%s\n",request);
+            boo=0;
+        }else{
+            printf("Donnees Reçu !\n");
+        }
    		//clear the message buffer
 		memset(request, 0, LINE_MAX);
-   		sleep (1); 
+   		sleep (0.1);
    		pthread_mutex_unlock((pthread_mutex_t*)&m);
    		//printf("pthread_mutex_unlock\n");
 	}
@@ -589,9 +597,9 @@ void *emettre(void *sock){
 			perror("sendto"); exit(1);
 		}
 		memset(msg, 0, LINE_MAX);
-		sleep (1); 
+		sleep (0.1);
 		pthread_mutex_unlock((pthread_mutex_t*)&m);
-   		sleep (1); 
+   		sleep (0.1);
 	}
 
 	pthread_exit (NULL);
