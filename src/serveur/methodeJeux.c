@@ -230,8 +230,6 @@ int nbPionClient(Jeu *jeu, Client c){
 
 int rechercherPionJoueur(Jeu *jeu, int x, int y, int numC){
 
-	int i;
-
 	if(((*jeu).tabJeu[x][y].isuse == 1) && ((*jeu).tabJeu[x][y].piece.numero == numC)){
 		return 0;
 	}
@@ -246,7 +244,17 @@ int rechercherPionJoueur(Jeu *jeu, int x, int y, int numC){
 
 int rechercherPionPlateau(Jeu *jeu, int x, int y, int numC){
 
-	int i;
+	int i, j;
+
+	for(i = 0; i < 10; i++){
+		for(j = 0; j < 10; j++){
+			if(x == i && y == j){
+				return 0;
+			}
+		}
+	}
+
+	return 1;
 
 	if(((*jeu).tabJeu[x][y].isuse != 1) && ((*jeu).tabJeu[x][y].isuse != 2)){
 		return 1;
@@ -319,14 +327,14 @@ int choisirPositionGauche(){
 	int valeur;
 
 	printf("Donnez moi sa position indiqué sur la gauche du plateau :\n");
-	scanf("%c", &pos);
+	scanf("%s", &pos);
 
 	while(sscanf(&pos, "%d", &valeur) != 1){
 		printf("\nEntrez un int pour continuer\n");
 		vider_buffer();
 		
 		printf("Donnez moi sa position indiqué sur la gauche du plateau :\n");
-		scanf("%c", &pos);
+		scanf("%s", &pos);
 	}
 
 	return valeur;
@@ -340,14 +348,14 @@ int choisirPositionDroite(){
 	int valeur;
 
 	printf("Donnez moi sa position indiqué au dessus du plateau :\n");
-	scanf("%c", &pos);
+	scanf("%s", &pos);
 
 	while(sscanf(&pos, "%d", &valeur) != 1){
 		printf("\nEntrez un int pour continuer\n");
 		vider_buffer();
 		
 		printf("Donnez moi sa position indiqué au dessus du plateau :\n");
-		scanf("%c", &pos);
+		scanf("%s", &pos);
 	}
 
 	return valeur;
@@ -363,6 +371,7 @@ int deplacerPion(Jeu *jeu, Client c){
 	p=rechercherPionPlateau(jeu, x1, y1, c.numero);
 	if(p == 1){
 		printf("\nErreur Jeton hors du plateau\n");
+		return 1;
 	}
 
 	p=rechercherPionJoueur(jeu, x1, y1, c.numero);
@@ -390,6 +399,7 @@ int deplacerPion(Jeu *jeu, Client c){
 			(*jeu).tabJeu[x2][y2].isuse = 1;
 			(*jeu).tabJeu[x2][y2].piece.numero = c.numero;
 			(*jeu).tabJeu[x2][y2].piece.type = 1;
+			verifDame(jeu, c.numero, x2, y2);
 			return 0;
 		}
 		// else if(p == 2){
@@ -441,6 +451,7 @@ int mangerAuto(Jeu *jeu, int x1, int x2, int y1, int y2, int numC){
 			p=caseIsLibreManger(jeu, numC, x1, x2, y1, y2, &x3, &y3);
 			if(p == 0){
 				manger(jeu, numC, x1, x2, y1, y2, &x3, &y3);
+				verifDame(jeu, numC, x3, y3);
 				return 0;
 			}
 		}
@@ -496,4 +507,20 @@ int deplacerAuto(Jeu *jeu, Client c){
 	}
 
 	return 1;
+}
+
+void verifDame(Jeu *jeu, int numC, int x, int y){
+
+	int i, j;
+
+	for(i = 0; i < 10; i++){
+		for(j = 0; j < 10; j++){
+			if(numC == 1 && j == 9 && i == x && j == y){
+				(*jeu).tabJeu[i][j].piece.type = 2;
+			}
+			else if(numC == 2 && j == 0 && i == x && j == y){
+				(*jeu).tabJeu[i][j].piece.type = 2;
+			}
+		}
+	}
 }
