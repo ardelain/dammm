@@ -543,8 +543,8 @@ int  jouerAvecJoueur(int sock,char monnom[30],char nom[30]){
    				pthread_mutex_lock((pthread_mutex_t*)&m);
    				clients[i].socketJDemande = sock;
    				clients[i].demandeDeJeu = 1;
-   				pthread_mutex_unlock((pthread_mutex_t*)&m);
    				strcpy(clients[i].nomDemande,monnom);
+   				pthread_mutex_unlock((pthread_mutex_t*)&m);
    				char etoile[REQUEST_MAX]="************************************************************\n";
 				if(send(clients[i].addr , etoile, REQUEST_MAX , 0)==-1) {
 											perror("sendto"); return;
@@ -1267,7 +1267,7 @@ void *clientThread(void *socket_c){//struct sockaddr_in src_addr
     	if((ret=recv(sock , request , REQUEST_MAX , 0))==-1) {
 	    		perror("recvfrom !");return;// exit(1);
 		}
-		if(strcmp(request,"")==0){
+		if(strcmp(request,"")==0){//|| request == NULL || sizeof(request) > 1024
 				//puts("request reçu null");
 				if(ret == 0)
 			    {
@@ -1340,15 +1340,17 @@ void *clientThread(void *socket_c){//struct sockaddr_in src_addr
 				//...
 			}
 		}else if(elClient.demandeDeJeu == 1){
-			if(strcmp(request,"oui")==0){//|| request == NULL || sizeof(request) > 1024
+			if(strcmp(request,"oui")==0){
 			   		//puts(" jouerAvecJoueur ACCEPT ");
 					pthread_mutex_lock((pthread_mutex_t*)&m);
 			   		clients[getClientIt(elClient.nom)].demandeDeJeu = 0; 
 			   		pthread_mutex_unlock((pthread_mutex_t*)&m);
+			   		char acc[REQUEST_MAX];strcpy(acc,elClient.nom);strcat(acc," a accepté !");
+			   		if(send(elClient.socketJDemande,acc , REQUEST_MAX , 0)==-1) {
+							perror("sendto"); return;
+					}
 			        creerJeu(sock,elClient.nom,elClient.nomDemande);
-
-
-			}else if(strcmp(request,"non")==0){//|| request == NULL || sizeof(request) > 1024
+			}else if(strcmp(request,"non")==0){
 			   		puts(" jouerAvecJoueur REJECT");
 			}else{
 				printf("Demande de jeu mauvaise reponse: %s",request);
