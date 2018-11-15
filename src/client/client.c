@@ -19,16 +19,17 @@
 
 typedef struct Client
 {
-	//struct sockaddr_in addr;//?
+//struct sockaddr_in addr;//?
 	int addr;
 	int isCo ; //si le client est connecté
 	int isinGame;//en jeu ou spectaur
-	int demandeDeJeu;
-	int socketJDemande;//table des joueur qui ont demandé de jouer
-	char nomDemande[30];
+	int demandeDeJeu;//1 si demande de jeu en cours
+	int socketJDemande;//socket du joueur qui a demandé de jouer
+	char nomDemande[30];//nom du joueur qui demande de jouer
 	int numero;
 	int numJeu;
-	int isInvite;
+	int isInvite;//si c'est un invite = 1
+	int isSp;//si c'est un spectateur = 1
 	int nbParties;
 	int nbPoints;
 	char nom[30];
@@ -499,7 +500,6 @@ void recupererJeu(int s){
 }
 
 void envoyerStrucJeu(int sock, Jeu jeu,struct DeplacementUser du){
-	puts("envoie jeu");
 	int i,j;
 	char c[REQUEST_MAX];
 	strcpy(c,"ojeu");
@@ -573,9 +573,20 @@ void *ecouter(void *sock){
 			memset(request, 0, LINE_MAX);
 			boo = 1;
 		}
-		//reception de la structure Jeu
-		if( strncmp(request,"xJeu",10) == 0){ //inutile
+		//reception de la structure Jeu quand on est spectateur
+		if( strncmp(request,"spJeu",10) == 0){
 			recupererJeu(s);
+			afficher(jeu);
+			boo = 1;
+		}
+		//reception de la structure Jeu quand on est joueur
+		if( strncmp(request,"xJeu",10) == 0){
+			recupererJeu(s);
+			if(strcmp(client.nom,jeu.client1.nom)==0){
+				printf("\t(Vous êtes les x)");
+			}else{
+				printf("\t(Vous êtes les o)");
+			}
 			choix = 1;
 			struct DeplacementUser du;
 			while(choix != 0){
@@ -589,6 +600,7 @@ void *ecouter(void *sock){
 			choix = 1;
 			//printf("\n************************************************************\n");
 			afficher(jeu);
+			
 			if(client.numJeu == 1){
 				jeu.tour = 2;
 			}else{

@@ -37,15 +37,16 @@
 typedef struct Client
 {
 	//struct sockaddr_in addr;//?
-	int addr;
+	int addr;//sock
 	int isCo ; //si le client est connecté
 	int isinGame;//en jeu ou spectaur
-	int demandeDeJeu;
-	int socketJDemande;//table des joueur qui ont demandé de jouer
-	char nomDemande[30];
+	int demandeDeJeu;//1 si demande de jeu en cours
+	int socketJDemande;//socket du joueur qui a demandé de jouer
+	char nomDemande[30];//nom du joueur qui demande de jouer
 	int numero;
 	int numJeu;
-	int isInvite;
+	int isInvite;//si c'est un invite = 1
+	int isSp;//si c'est un spectateur = 1
 	int nbParties;
 	int nbPoints;
 	char nom[30];
@@ -87,6 +88,12 @@ struct DeplacementUser{
 	int x2;
 	int y2;
 };
+
+struct Spc{//pour le controle spectateur
+	int numero;
+	int nbSp;
+	int t[100];//socket invite
+};
 /***************************************************************************************************************************
 	variable
 ***************************************************************************************************************************/
@@ -103,6 +110,8 @@ struct sockaddr_in addr;
 pthread_t tabthread[100];//client co
 int nbClientCo=0;
 int nbInvite=0;
+
+struct Spc tabSp[100];//[numero jeu][socket client invite]
 /***************************************************************************************************************************
 	methode lambda
 ***************************************************************************************************************************/
@@ -322,12 +331,15 @@ Client connexion(int sock){
 					printf("\nMessage PB");return;//exit(1);
 	}
 	if(strcmp(request,"")==0){
+		connexion(sock);
 	 	puts("connexion Message PB");
 		return;
 	}
 	int i;
    	if((i = atoi(request)) < 0){
+   		connexion(sock);
    		puts("ERREUT atoi");
+   		//connexion(sock);
 		return;
 	}
 	Client nvClient;
@@ -346,6 +358,7 @@ Client connexion(int sock){
 		   		}
 				if(strcmp(request,"")==0){ //|| request == NULL || sizeof(request) > 1024
 				   		puts("connexion Message PB");
+				   		connexion(sock);
 				   		return;
 				}
 		   		strcpy(nom,request);
@@ -360,6 +373,7 @@ Client connexion(int sock){
 				   	}
 					if(strcmp(request,"")==0){//|| request == NULL || sizeof(request) > 1024
 				   		puts("connexion Message PB");
+				   		connexion(sock);
 				   		return;
 				   	}
 					strcpy(mdp,request);
@@ -414,6 +428,7 @@ Client connexion(int sock){
 		   		}
 		   		if(strcmp(request,"")==0){//|| request == NULL || sizeof(request) > 1024
 		   				puts(" inscription strcmp(request,"")==0 : nom");
+		   				connexion(sock);
 				   		return;
 				   }
 		   		strcpy(nom,request);
@@ -428,6 +443,7 @@ Client connexion(int sock){
 				   	}
 				   	if(strcmp(request,"")==0){//|| request == NULL || sizeof(request) > 1024
 				   		puts(" inscription strcmp(request,"")==0 : mdp");
+				   		connexion(sock);
 				   		return;
 				   	}
 				   	char mc[REQUEST_MAX]="Vous etes connecté et inscrit";
@@ -469,6 +485,7 @@ Client connexion(int sock){
 		   		}
 		   		if(strcmp(request,"")==0){//|| request == NULL || sizeof(request) > 1024
 		   				puts(" inviter strcmp(request,"")==0 : nom");
+		   				connexion(sock);
 				   		return;
 				   }
 		   		strcpy(nom,request);
@@ -562,15 +579,46 @@ int  jouerAvecJoueur(int sock,char monnom[30],char nom[30]){
    		return 0 ;
 }
 
-//
-void listerPartie(){
-	
-}
 
+void envoyerStrucJeu(char *pre,int sock, Jeu jeu){
+	//puts("Envoie jeu");
+	int i,j;
+	char c[REQUEST_MAX];
+	strcpy(c,pre);
 
-//
-void voirPartie(int num_partie){
-	
+	/*char etoile[REQUEST_MAX]="\n************************************************************\n";
+	if(send(sock , etoile, REQUEST_MAX , 0)==-1) {
+			perror("sendto"); return;
+	}*/
+	if(send(sock , c, REQUEST_MAX , 0)==-1) {
+		perror("sendto"); return;//exit(1);
+	}
+	sleep(0.1);
+	//puts("1");
+	if(send(sock , &jeu.client1, sizeof(jeu.client1) , 0)==-1) {
+		perror("sendto"); return;//exit(1);
+	}
+	sleep(0.1);
+	//puts("2");
+	if(send(sock , &jeu.client2, sizeof(jeu.client2) , 0)==-1) {
+		perror("sendto"); return;//exit(1);
+	}
+	sleep(0.1);
+	//puts("3");
+	if(send(sock , &jeu.tabP, sizeof(jeu.tabP) , 0)==-1) {
+		perror("sendto"); return;//exit(1);
+	}
+	sleep(0.1);
+	//puts("4");
+	for(i = 0; i < 10; i++){
+		sleep(0.1);
+		for(j = 0; j < 10; j++){
+			sleep(0.1);
+			if(send(sock ,&jeu.tabJeu[i][j], sizeof(jeu.tabJeu[i][j]) , 0)==-1) {
+				perror("sendto"); return;//exit(1);
+			}
+		}
+	}
 }
 
 
@@ -629,7 +677,7 @@ int getexec(int sock,char *command, char *response, unsigned size,Client client)
 	}else if(strcmp(command,"TEST1") == 0 || strcmp(command,"TEST2") == 0|| strcmp(command,"ELTEST") == 0){
 		boo = 1;
 	}else if(strcmp(command,"voir") == 0){
-    	char m[REQUEST_MAX] = "Quelle partie ? : ";
+    	char m[REQUEST_MAX] = "Quelle partie ? : (numero)";
 		if(send(sock , m , REQUEST_MAX , 0)==-1) {
 							perror("sendto"); return;//exit(1);
 		
@@ -640,7 +688,25 @@ int getexec(int sock,char *command, char *response, unsigned size,Client client)
 		if(strcmp(response,"")==0){//response == NULL || sizeof(response) > 1024 || 
 				printf("\nMessage null ! get exec voir");return;//exit(1);
 		}
-		boo = 0;
+		int i;
+	   	if((i = atoi(response)) < 0){
+	   		puts(" voir ERREUT atoi");//request pas un nombre
+	   		strcpy(response,"Erreur (nombre demandé) (sortie de voir)");
+		}else{
+			if(nbJeux>i){
+				pthread_mutex_lock((pthread_mutex_t*)&m);
+				tabSp[jeux[i].numero].t[tabSp[jeux[i].numero].nbSp] = sock;
+				tabSp[jeux[i].numero].nbSp++;
+				clients[getClientIt(client.nom)].isSp = 1;
+				pthread_mutex_unlock((pthread_mutex_t*)&m);
+				envoyerStrucJeu("spJeu",client.addr,jeux[i]);
+				strcpy(response,"Vous êtes spectateur (commande quitter pour quitter)");
+			}else{
+				strcpy(response,"Erreur jeu inconnu (sortie de voir)");
+			}
+
+		}
+		//boo = 1;
 	}else if(strcmp(command,"parties") == 0){
    		char list[1024];
 		int i;
@@ -648,11 +714,11 @@ int getexec(int sock,char *command, char *response, unsigned size,Client client)
 		for(i = 0;i<nbJeux;i++){
 	   			strcat(list,"\n");
 	   			char s[5]; // Nombre maximal de chiffres + 1
-				sprintf(s, "%d", jeux[i].numero);
+				sprintf(s, "num %d", jeux[i].numero);
 	   			strcat(list,s);
 	   			strcat(list," ");
 	   			strcat(list,jeux[i].client1.nom);
-	   			strcat(list," ");
+	   			strcat(list," contre ");
 	   			strcat(list,jeux[i].client2.nom);
 	   	}
    		strcpy(response,list);
@@ -1065,46 +1131,6 @@ char * charJeu(Jeu *jeu){
 	strcat(c,"\n");
 	return c;
 }
-void envoyerStrucJeu(int sock, Jeu jeu){
-	puts("Envoie jeu");
-	int i,j;
-	char c[REQUEST_MAX];
-	strcpy(c,"xJeu");
-
-	/*char etoile[REQUEST_MAX]="\n************************************************************\n";
-	if(send(sock , etoile, REQUEST_MAX , 0)==-1) {
-			perror("sendto"); return;
-	}*/
-	if(send(sock , c, REQUEST_MAX , 0)==-1) {
-		perror("sendto"); return;//exit(1);
-	}
-	sleep(0.1);
-	//puts("1");
-	if(send(sock , &jeu.client1, sizeof(jeu.client1) , 0)==-1) {
-		perror("sendto"); return;//exit(1);
-	}
-	sleep(0.1);
-	//puts("2");
-	if(send(sock , &jeu.client2, sizeof(jeu.client2) , 0)==-1) {
-		perror("sendto"); return;//exit(1);
-	}
-	sleep(0.1);
-	//puts("3");
-	if(send(sock , &jeu.tabP, sizeof(jeu.tabP) , 0)==-1) {
-		perror("sendto"); return;//exit(1);
-	}
-	sleep(0.1);
-	//puts("4");
-	for(i = 0; i < 10; i++){
-		sleep(0.1);
-		for(j = 0; j < 10; j++){
-			sleep(0.1);
-			if(send(sock ,&jeu.tabJeu[i][j], sizeof(jeu.tabJeu[i][j]) , 0)==-1) {
-				perror("sendto"); return;//exit(1);
-			}
-		}
-	}
-}
 
 
 Jeu recupererJeu(int s,struct DeplacementUser * du){
@@ -1197,8 +1223,9 @@ void creerJeu(int sock,char*n1,char*n2){ // en lever thread :  //void *jouer(voi
 	Client c = getClient(n2);
 	envoyerClient(sock,jeu.client1);//update 1 er client (client acceptant)
 	envoyerClient(c.addr,jeu.client2);//update 2 eme client (client demandeur )
-    envoyerStrucJeu(sock,jeu);//envoie du jeux créér au client acceptant
+    envoyerStrucJeu("xJeu",sock,jeu);//envoie du jeux créér au client acceptant
 
+    //tabSp[jeu.numero].numero = jeu.numero;
 	//sleep(1);
 	pthread_mutex_unlock((pthread_mutex_t*)&m);
 	//pthread_exit(NULL);
@@ -1282,10 +1309,28 @@ void *clientThread(void *socket_c){//struct sockaddr_in src_addr
 			    }
 			  	return;
 		}
-		if(elClient.isinGame == 1){
+		if(elClient.isSp == 1){
+			if(strcmp(request,"quitter") == 0){
+				int u,v;
+				for(u = 0; u < nbJeux;u++){
+					for(v = 0; v < tabSp[u].nbSp;v++){
+						if(tabSp[u].t[v] ==  elClient.addr){
+							pthread_mutex_lock((pthread_mutex_t*)&m);
+							tabSp[u].t[v] = -1;//(int*)malloc(sizeof(int) ); //envoie a la soket O (a ameliorer)
+							clients[getClientIt(elClient.nom)].isSp = 0;
+							pthread_mutex_unlock((pthread_mutex_t*)&m);
+							char quitt[REQUEST_MAX]="Vous n'etes plus spectateur";
+							if(send(sock , quitt, REQUEST_MAX , 0)==-1) {
+							perror("sendto"); return;
+						}
+						}
+					}
+				}
+			}
+		}else if(elClient.isinGame == 1){
 			if(strcmp(request,"xjeu") == 0){
 				Jeu jeu = getJeu(elClient.nom);
-			    envoyerStrucJeu(sock,jeu);
+			    envoyerStrucJeu("xjeu",sock,jeu);
 			}else if(strcmp(request,"ojeu") == 0){
 				Jeu jeu = getJeu(elClient.nom);
 				char ct[REQUEST_MAX]="Tour au joueur adverse";
@@ -1320,13 +1365,24 @@ void *clientThread(void *socket_c){//struct sockaddr_in src_addr
 				if(boo == 0){
 					struct DeplacementUser d;
 					Jeu j = recupererJeu(sock,&d);
+					//faire si jeu fini..............................................................................................................................
+					//Array[0] = (int*)malloc(sizeof(int) * 12);
 					if(deplacerPion(&jeu, d.numJeu, d.x1, d.y1, d.x2, d.y2)!=1){
 						int nn = getJeuInt(j.client1.nom);
 						pthread_mutex_lock((pthread_mutex_t*)&m);
 						jeux[nn] = jeu;
 						jeux[getJeuInt(elClient.nom)].tour = to;
 						pthread_mutex_unlock((pthread_mutex_t*)&m);
-			    		envoyerStrucJeu(socketAutreClientJeu(jeux[getJeuInt(elClient.nom)],elClient.nom),jeux[getJeuInt(elClient.nom)]);
+			    		
+			    		//envoie du jeu a l'adversaire
+			    		envoyerStrucJeu("xJeu",socketAutreClientJeu(jeux[getJeuInt(elClient.nom)],elClient.nom),jeux[getJeuInt(elClient.nom)]);
+						//envoie du jeu au potentiel invite
+			    		int i, j;
+						for(j = 0; j < tabSp[getJeuInt(elClient.nom)].nbSp; j++){
+							if(tabSp[jeux[getJeuInt(elClient.nom)].numero].t[j] != -1){
+			    		 		envoyerStrucJeu("spJeu",tabSp[jeux[getJeuInt(elClient.nom)].numero].t[j],jeux[getJeuInt(elClient.nom)]);
+							}
+			    		}
 					}else{
 						printf("(%s) Frauduleux\n",elClient.nom);
 						if(send(sock , cf, REQUEST_MAX , 0)==-1) {
@@ -1368,7 +1424,6 @@ void *clientThread(void *socket_c){//struct sockaddr_in src_addr
 		}
 		memset(request, 0, LINE_MAX);
     }
-
     decoClient(elClient.nom);//inutile 
     sauv( &clients,sizeof(clients),&nbClient ,FICHIER_CLIENT);//inutile
     //clients[elClient.num].isCo=0;
