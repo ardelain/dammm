@@ -443,8 +443,8 @@ Client connexion(int sock){
 					inscr = 1;
 					memset(request, 0, LINE_MAX);
 					clients[nbClient] = nvClient;
-					pthread_mutex_unlock((pthread_mutex_t*)&m);
 					nbClient++;
+					pthread_mutex_unlock((pthread_mutex_t*)&m);
 					envoyerClient(sock,nvClient);
 					printf("Connexion: nom : %s\n",nom);
 					return nvClient;
@@ -490,9 +490,9 @@ Client connexion(int sock){
 					inscr = 1;
 					memset(request, 0, LINE_MAX);
 					clients[nbClient] = nvClient;
-					pthread_mutex_unlock((pthread_mutex_t*)&m);
 					nbClient++;
 					nbInvite++;
+					pthread_mutex_unlock((pthread_mutex_t*)&m);
 					envoyerClient(sock,nvClient);
 					printf("Connexion: nom : %s\n",nom);
 					return nvClient;
@@ -540,8 +540,10 @@ int  jouerAvecJoueur(int sock,char monnom[30],char nom[30]){
 		strcat(msg, monnom);
    		for(i = 0;i<nbClient;i++){
    			if(strcmp(nom,clients[i].nom)==0 && strcmp(nom,monnom)!=0){
+   				pthread_mutex_lock((pthread_mutex_t*)&m);
    				clients[i].socketJDemande = sock;
    				clients[i].demandeDeJeu = 1;
+   				pthread_mutex_unlock((pthread_mutex_t*)&m);
    				strcpy(clients[i].nomDemande,monnom);
    				char etoile[REQUEST_MAX]="************************************************************\n";
 				if(send(clients[i].addr , etoile, REQUEST_MAX , 0)==-1) {
@@ -573,7 +575,7 @@ void voirPartie(int num_partie){
 
 
 int getexec(int sock,char *command, char *response, unsigned size,Client client) {
-    pthread_mutex_lock((pthread_mutex_t*)&m);
+    //pthread_mutex_lock((pthread_mutex_t*)&m);
     int r;
 	memset (response, 0, sizeof (response));
 	strcpy(response,"exec !");
@@ -624,7 +626,6 @@ int getexec(int sock,char *command, char *response, unsigned size,Client client)
 	    	strcat(response,cc);
 	    	boo = 0;
     	}
-    	//memset (response, 0, sizeof (response));// REPONSE VIDE ............................................TEST1TEST2ELTEST
 	}else if(strcmp(command,"TEST1") == 0 || strcmp(command,"TEST2") == 0|| strcmp(command,"ELTEST") == 0){
 		boo = 1;
 	}else if(strcmp(command,"voir") == 0){
@@ -640,14 +641,7 @@ int getexec(int sock,char *command, char *response, unsigned size,Client client)
 				printf("\nMessage null ! get exec voir");return;//exit(1);
 		}
 		boo = 0;
-		//..........................................................................................................
-	   	/*if(voirPartie(sock,client.nom,response) == 0){//enlever if
-	   		puts("probleme adversaire deco ou null");
-	   		getexec(sock,command, response, size,client) ;
-	   		return;
-    	}*/
 	}else if(strcmp(command,"parties") == 0){
-		puts("paaa");
    		char list[1024];
 		int i;
 		strcat(list,"jeux : ");
@@ -681,9 +675,7 @@ int getexec(int sock,char *command, char *response, unsigned size,Client client)
     	}
     	boo =0;
 	}
-
-
-	pthread_mutex_unlock((pthread_mutex_t*)&m);
+	//pthread_mutex_unlock((pthread_mutex_t*)&m);
 }
 
 struct source{
@@ -1330,8 +1322,10 @@ void *clientThread(void *socket_c){//struct sockaddr_in src_addr
 					Jeu j = recupererJeu(sock,&d);
 					if(deplacerPion(&jeu, d.numJeu, d.x1, d.y1, d.x2, d.y2)!=1){
 						int nn = getJeuInt(j.client1.nom);
+						pthread_mutex_lock((pthread_mutex_t*)&m);
 						jeux[nn] = jeu;
 						jeux[getJeuInt(elClient.nom)].tour = to;
+						pthread_mutex_unlock((pthread_mutex_t*)&m);
 			    		envoyerStrucJeu(socketAutreClientJeu(jeux[getJeuInt(elClient.nom)],elClient.nom),jeux[getJeuInt(elClient.nom)]);
 					}else{
 						printf("(%s) Frauduleux\n",elClient.nom);
@@ -1348,17 +1342,9 @@ void *clientThread(void *socket_c){//struct sockaddr_in src_addr
 		}else if(elClient.demandeDeJeu == 1){
 			if(strcmp(request,"oui")==0){//|| request == NULL || sizeof(request) > 1024
 			   		//puts(" jouerAvecJoueur ACCEPT ");
+					pthread_mutex_lock((pthread_mutex_t*)&m);
 			   		clients[getClientIt(elClient.nom)].demandeDeJeu = 0; 
-			   		/*
-			   		struct source cl;
-			   		pthread_t _thread;
-			    	strcpy(cl.nom1 ,elClient.nom);
-			    	strcpy(cl.nom2,elClient.nomDemande);
-			    	if( (tabthread[nbClientCo+1]=pthread_create( &_thread , NULL ,  creerJeu , (void*) &cl) )< 0) //thread inutile ?
-			        {
-			            perror("could not create thread");
-			            return;
-			        }*/
+			   		pthread_mutex_unlock((pthread_mutex_t*)&m);
 			        creerJeu(sock,elClient.nom,elClient.nomDemande);
 
 
@@ -1367,7 +1353,9 @@ void *clientThread(void *socket_c){//struct sockaddr_in src_addr
 			}else{
 				printf("Demande de jeu mauvaise reponse: %s",request);
 			}
+			pthread_mutex_lock((pthread_mutex_t*)&m);
 			clients[getClientIt(elClient.nom)].demandeDeJeu =0;
+			pthread_mutex_unlock((pthread_mutex_t*)&m);
 		}else{
 			
 	        request[ret]=0;
