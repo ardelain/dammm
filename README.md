@@ -4,7 +4,10 @@ jeu de dame en réseaux
 <img src="/ressource/jeu de dammm.jpg" alt="My cool logo"/>
 </br>
 
-Le serveur damm :
+
+Réalisé Par Arthur Delain et Floran Chazelas
+
+Le serveur damm : 
 
 executer coté serveur :
 cd src/serveur/
