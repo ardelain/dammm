@@ -516,6 +516,17 @@ int deplacerPion(Jeu *jeu, Client c){
 				}
 			}
 
+			else{
+				printf("\nCette case est occupée !\n\n");
+				(*jeu).tabJeu[x1][y1].isuse = 2;
+				(*jeu).tabJeu[x1][y1].piece.numero = 0;
+				(*jeu).tabJeu[x1][y1].piece.type = 0;
+				(*jeu).tabJeu[xx][yy].isuse = 1;
+				(*jeu).tabJeu[xx][yy].piece.numero = c.numero;
+				(*jeu).tabJeu[xx][yy].piece.type = 2;
+				return 1;
+			}
+
 			x=x1;
 			y=y1;
 			x1=x2;
