@@ -411,7 +411,8 @@ int mangerAuto(Jeu *jeu, int x1, int x2, int y1, int y2, int numC){
 	return 1;
 }
 
-int deplacerAuto(Jeu *jeu, Client c){
+
+int deplacerAuto(Jeu *jeu, Client c,struct DeplacementUser * du){
 
 	int i, j, p, x1, x2, y1, y2;
 
@@ -423,7 +424,13 @@ int deplacerAuto(Jeu *jeu, Client c){
 
 				x2 = x1-1;
 				y2 = y1+1;
+
 				p=mangerAuto(jeu, x1, x2, y1, y2, c.numJeu);
+				(*du).numJeu=c.numJeu;
+				(*du).x1=x1;
+				(*du).y1=y1;
+				(*du).x2=x2;
+				(*du).y2=y2;
 				if (p == 0)
 				{
 					return 0;
@@ -432,6 +439,11 @@ int deplacerAuto(Jeu *jeu, Client c){
 				x2 = x1+1;
 				y2 = y1+1;
 				p=mangerAuto(jeu, x1, x2, y1, y2, c.numJeu);
+				(*du).numJeu=c.numJeu;
+				(*du).x1=x1;
+				(*du).y1=y1;
+				(*du).x2=x2;
+				(*du).y2=y2;
 				if (p == 0)
 				{
 					return 0;
@@ -440,6 +452,11 @@ int deplacerAuto(Jeu *jeu, Client c){
 				x2 = x1-1;
 				y2 = y1-1;
 				p=mangerAuto(jeu, x1, x2, y1, y2, c.numJeu);
+				(*du).numJeu=c.numJeu;
+				(*du).x1=x1;
+				(*du).y1=y1;
+				(*du).x2=x2;
+				(*du).y2=y2;
 				if (p == 0)
 				{
 					return 0;
@@ -448,6 +465,11 @@ int deplacerAuto(Jeu *jeu, Client c){
 				x2 = x1+1;
 				y2 = y1-1;
 				p=mangerAuto(jeu, x1, x2, y1, y2, c.numJeu);
+				(*du).numJeu=c.numJeu;
+				(*du).x1=x1;
+				(*du).y1=y1;
+				(*du).x2=x2;
+				(*du).y2=y2;
 				if (p == 0)
 				{
 					return 0;
@@ -590,7 +612,7 @@ void *ecouter(void *sock){
 			choix = 1;
 			struct DeplacementUser du;
 			while(choix != 0){
-				choix = deplacerAuto(&jeu, client);
+				choix = deplacerAuto(&jeu, client,&du);
 				if(choix == 0){
 					printf("\nDéplacement automatique effectué car vous pouviez manger un pion !\n");
 				}else{

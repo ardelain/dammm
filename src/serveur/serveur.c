@@ -289,7 +289,7 @@ void envoyerClient(int sock,Client client){
 	}
 }
 //connexion et inscription
-Client connexion(int sock){
+Client connexion(int sock,int *result){
 	int ret;
 	int inscription = 0;
 	socklen_t len_src_addr;
@@ -312,34 +312,34 @@ Client connexion(int sock){
 	*/
 	char etoile[REQUEST_MAX]="\n************************************************************";
     if(send(sock , etoile, REQUEST_MAX , 0)==-1) {
-							perror("sendto"); return;
+							perror("sendto"); *result=-1; return;
 	}
 	if(send(sock , etoile, REQUEST_MAX , 0)==-1) {
-							perror("sendto"); return;
+							perror("sendto");*result=-1;  return;
 	}
     if(send(sock , m , REQUEST_MAX , 0)==-1) {
-			perror("sendto"); return;//exit(1);
+			perror("sendto"); *result=-1; return;//exit(1);
 	}
 	if(send(sock , el , REQUEST_MAX , 0)==-1) {
-    			perror("sendto"); return;//exit(1);
+    			perror("sendto"); *result=-1; return;//exit(1);
     }
 
     if((ret=recv(sock , request , REQUEST_MAX , 0))==-1) {
-    	perror("recvfrom !2"); return;//exit(1);
+    	perror("recvfrom !2"); *result=-1; return;//exit(1);
    	}
    	if(request == NULL || sizeof(request) > 1024){
-					printf("\nMessage PB");return;//exit(1);
+					printf("\nMessage PB"); *result=-1; return;//exit(1);
 	}
 	if(strcmp(request,"")==0){
-		connexion(sock);
 	 	puts("connexion Message PB");
+	 	*result=-1;
 		return;
 	}
 	int i;
    	if((i = atoi(request)) < 0){
-   		connexion(sock);
    		puts("ERREUT atoi");
    		//connexion(sock);
+   		*result=-1;
 		return;
 	}
 	Client nvClient;
@@ -351,14 +351,14 @@ Client connexion(int sock){
 	   		int co = 0;
 	   		while(co == 0){
 	   			if(send(sock , msg , REQUEST_MAX , 0)==-1) {
-							perror("sendto"); return;//exit(1);
+							perror("sendto");  return;//exit(1);
 				}
 	   			if((ret=recv(sock , request , REQUEST_MAX , 0))==-1) {
 	    			perror("recvfrom !"); return;//exit(1);
 		   		}
 				if(strcmp(request,"")==0){ //|| request == NULL || sizeof(request) > 1024
 				   		puts("connexion Message PB");
-				   		connexion(sock);
+				   		*result=-1;
 				   		return;
 				}
 		   		strcpy(nom,request);
@@ -373,7 +373,7 @@ Client connexion(int sock){
 				   	}
 					if(strcmp(request,"")==0){//|| request == NULL || sizeof(request) > 1024
 				   		puts("connexion Message PB");
-				   		connexion(sock);
+				   		*result=-1;
 				   		return;
 				   	}
 					strcpy(mdp,request);
@@ -428,7 +428,7 @@ Client connexion(int sock){
 		   		}
 		   		if(strcmp(request,"")==0){//|| request == NULL || sizeof(request) > 1024
 		   				puts(" inscription strcmp(request,"")==0 : nom");
-		   				connexion(sock);
+		   				*result=-1;
 				   		return;
 				   }
 		   		strcpy(nom,request);
@@ -443,7 +443,7 @@ Client connexion(int sock){
 				   	}
 				   	if(strcmp(request,"")==0){//|| request == NULL || sizeof(request) > 1024
 				   		puts(" inscription strcmp(request,"")==0 : mdp");
-				   		connexion(sock);
+				   		*result=-1;
 				   		return;
 				   	}
 				   	char mc[REQUEST_MAX]="Vous etes connecté et inscrit";
@@ -485,7 +485,7 @@ Client connexion(int sock){
 		   		}
 		   		if(strcmp(request,"")==0){//|| request == NULL || sizeof(request) > 1024
 		   				puts(" inviter strcmp(request,"")==0 : nom");
-		   				connexion(sock);
+		   				*result=-1;
 				   		return;
 				   }
 		   		strcpy(nom,request);
@@ -528,7 +528,7 @@ Client connexion(int sock){
 					perror("sendto"); return;//exit(1);
 			}
    			printf("\nPB mauvaise commande\n");
-   			connexion(sock);
+   			connexion(sock,result);
    		break;
    	}
 }
@@ -1280,7 +1280,15 @@ void *clientThread(void *socket_c){//struct sockaddr_in src_addr
 	char indic[REQUEST_MAX]="Noter l'action à réaliser :";
 	Client elClient;
 
-    elClient = connexion(sock);
+	int resultatCo;
+    elClient = connexion(sock,&resultatCo);
+
+    if(resultatCo<0){
+    	close(sock);
+    	pthread_exit(NULL); 
+    	return;
+    }
+
     if(send(sock , saut, REQUEST_MAX , 0)==-1) {
 							perror("sendto"); return;
 	}

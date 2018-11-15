@@ -37,3 +37,7 @@ Déroulement du  programme cote client : (apres avoir rentrer l'adresse ip)
 		-> quand on a joué on envoie les information du "nouveau" plateau au serveur ainsi que les différentes valeurs de notre mouvement; cela afin que le serveur rejout le tour et verifie son integrité (il verifie aussi l'identité de l'envoyeur et bloque les probèmes (mauvais client, pas sont tour, mauvais mouvement,...))
 
 4)on peu regardé une partie et partir quand on le souhaite (commande : voir   / quitter)
+
+
+
+L'implementation du jeu de damme n'est pas integré en totalité, mais toutes les regle et methode restante sont dans methodedeJeux.c (je le jeu reste optionnel) 
