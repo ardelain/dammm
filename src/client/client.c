@@ -28,6 +28,7 @@ typedef struct Client
 	char nomDemande[30];
 	int numero;
 	int numJeu;
+	int isInvite;
 	int nbParties;
 	int nbPoints;
 	char nom[30];
@@ -104,6 +105,15 @@ int init(struct sockaddr_in dst_addr,struct hostent * hostent){
 		perror("socket"); exit(1);
 	}
 
+	/*
+	printf("Noter l'addresse ip où joindre le Serveur:");
+	char ip[64];
+	scanf("%s",&ip);
+	if((hostent=gethostbyname(ip))==NULL) {
+		herror("gethostbyname"); exit(1);
+	}
+	*/
+	
 	if((hostent=gethostbyname(GROUP))==NULL) {
 		herror("gethostbyname"); exit(1);
 	}
@@ -455,7 +465,6 @@ void recupererClients(int s){
 	}
 }
 void recupererJeu(int s){
-	puts("JEU");
 	int numero;//non uitile
 	int i,j;
 	Cellule tabJeu[10][10];
@@ -486,7 +495,6 @@ void recupererJeu(int s){
 	/*if((recv(s, &jeu , sizeof(jeu) , 0))==-1) {
    		perror("recvfrom !"); exit(1);
    	}*/
-   	puts("JEU RECUPERE");
  	afficher(jeu);
 }
 
@@ -612,6 +620,7 @@ void *emettre(void *sock){
 	int lg,ret;
 	int s= *(int*)sock;
 	char msg[LINE_MAX];
+	int boo =0;
 	while(1 && strcmp(msg,"quit") !=0 ){
 		scanf("%s",&msg);
 		//puts("emmission");
@@ -619,9 +628,20 @@ void *emettre(void *sock){
 		if(msg == NULL || sizeof(msg) > LINE_MAX || strcmp(msg,"") ==0){
 				printf("\nMessage null !");exit(1);
 		}
-		if(send(s , msg , LINE_MAX , 0)==-1) {
-			perror("sendto"); exit(1);
+		if(strcmp(msg,"help") ==0){
+				printf("Commande :\nList: lister les joueurs connectés\nparties : lister parties en cours\njouer: faire une demande de jeu à un joueur\nvoir: regarder une partie en cours\n");
+				boo =1;
 		}
+		/*if(strcmp(msg,"List") !=0 &&strcmp(msg,"parties") !=0 &&strcmp(msg,"jouer") !=0 &&strcmp(msg,"voir") !=0 ){
+				printf("Mauvaise Commande");
+				boo =1;
+		}*/
+		if(boo ==0){
+           if(send(s , msg , LINE_MAX , 0)==-1) {
+			perror("sendto"); exit(1);
+			}
+            boo=0;
+        }
 		memset(msg, 0, LINE_MAX);
 		sleep (0.1);
 		pthread_mutex_unlock((pthread_mutex_t*)&m);
