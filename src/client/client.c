@@ -106,14 +106,14 @@ int init(struct sockaddr_in dst_addr,struct hostent * hostent){
 		perror("socket"); exit(1);
 	}
 
-	/*
+	
 	printf("Noter l'addresse ip où joindre le Serveur:");
 	char ip[64];
 	scanf("%s",&ip);
 	if((hostent=gethostbyname(ip))==NULL) {
 		herror("gethostbyname"); exit(1);
 	}
-	*/
+	
 	
 	if((hostent=gethostbyname(GROUP))==NULL) {
 		herror("gethostbyname"); exit(1);
