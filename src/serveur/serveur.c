@@ -285,7 +285,7 @@ Client connexion(int sock){
 	int inscription = 0;
 	socklen_t len_src_addr;
 	char el[REQUEST_MAX]="1.connexion\t2.inscription\t3.inviter";//noter le numero d'action a réaliser (0 pour retour à ce menu):\n
-	char m[REQUEST_MAX]="Noter le numero d'action a réaliser";
+	char m[REQUEST_MAX]="Noter le numero d'action a réaliser :";
 	char m2[REQUEST_MAX]="1.connexion\n";
 	char m3[REQUEST_MAX]="2.inscription\n";
 	char m4[REQUEST_MAX]="3.inviter\n";
@@ -301,6 +301,13 @@ Client connexion(int sock){
 			perror("sendto"); exit(1);
 	}
 	*/
+	char etoile[REQUEST_MAX]="\n************************************************************";
+    if(send(sock , etoile, REQUEST_MAX , 0)==-1) {
+							perror("sendto"); return;
+	}
+	if(send(sock , etoile, REQUEST_MAX , 0)==-1) {
+							perror("sendto"); return;
+	}
     if(send(sock , m , REQUEST_MAX , 0)==-1) {
 			perror("sendto"); return;//exit(1);
 	}
@@ -536,7 +543,10 @@ int  jouerAvecJoueur(int sock,char monnom[30],char nom[30]){
    				clients[i].socketJDemande = sock;
    				clients[i].demandeDeJeu = 1;
    				strcpy(clients[i].nomDemande,monnom);
-   				puts("send");
+   				char etoile[REQUEST_MAX]="************************************************************\n";
+				if(send(clients[i].addr , etoile, REQUEST_MAX , 0)==-1) {
+											perror("sendto"); return;
+				}
    				if(send(clients[i].addr , msg , LINE_MAX , 0)==-1) {
 					perror("jouerAvecJoueur send failed");
 				}
@@ -567,7 +577,7 @@ int getexec(int sock,char *command, char *response, unsigned size,Client client)
     int r;
 	memset (response, 0, sizeof (response));
 	strcpy(response,"exec !");
-	int boo = 0;
+	int boo = 0;//0 si on envoie le message (action normale) 1 sinon
     /*
     if(send(sock , response , REQUEST_MAX , 0)==-1) {
 							perror("sendto"); return;//exit(1);
@@ -575,14 +585,16 @@ int getexec(int sock,char *command, char *response, unsigned size,Client client)
    	if(strcmp(command,"list") == 0){
    		char list[1024];
 		int i;
-		strcat(list,"joueurs :");
+		strcat(list,"\njoueurs :\n");
 		for(i = 0;i<nbClient;i++){
 	   		if(clients[i].isCo == 1){
-	   				strcat(list,"\n");
+	   				strcat(list,"\t-");
 	   				strcat(list,clients[i].nom);
+	   				strcat(list,"\n");
 	   		}
 	   	}
    		strcpy(response,list);
+   		memset(list, 0, LINE_MAX);
    		boo=0;
 	}else if(strcmp(command,"jouer") == 0){
 		char m[REQUEST_MAX] = "avec quel joueur jouer ? : ";
@@ -590,7 +602,6 @@ int getexec(int sock,char *command, char *response, unsigned size,Client client)
 							perror("sendto"); return;//exit(1);
 		
 		}
-		puts("avec quel joueur jouer");
 		if((recv(sock , response , REQUEST_MAX , 0))==-1) {
 	    		perror("recvfrom !");return;// exit(1);
 		}
@@ -613,8 +624,10 @@ int getexec(int sock,char *command, char *response, unsigned size,Client client)
 	    	strcat(response,cc);
 	    	boo = 0;
     	}
-    	//memset (response, 0, sizeof (response));// REPONSE VIDE ............................................
-	}else if(strcmp(response,"voir") == 0){
+    	//memset (response, 0, sizeof (response));// REPONSE VIDE ............................................TEST1TEST2ELTEST
+	}else if(strcmp(command,"TEST1") == 0 || strcmp(command,"TEST2") == 0|| strcmp(command,"ELTEST") == 0){
+		boo = 1;
+	}else if(strcmp(command,"voir") == 0){
     	char m[REQUEST_MAX] = "Quelle partie ? : ";
 		if(send(sock , m , REQUEST_MAX , 0)==-1) {
 							perror("sendto"); return;//exit(1);
@@ -633,7 +646,7 @@ int getexec(int sock,char *command, char *response, unsigned size,Client client)
 	   		getexec(sock,command, response, size,client) ;
 	   		return;
     	}*/
-	}else if(strcmp(response,"parties") == 0){
+	}else if(strcmp(command,"parties") == 0){
 		puts("paaa");
    		char list[1024];
 		int i;
@@ -653,11 +666,15 @@ int getexec(int sock,char *command, char *response, unsigned size,Client client)
 	}/*else if(strcmp(request,"")){
     //.......
     */else{
-    	strcpy(response,"Mauvaise Commande.");
+    	strcpy(response,"Mauvaise Commande.");//(help pour la liste des commandes)
         //boo = 1;
         //memset(response, 0, LINE_MAX);
     }
 	if(boo==0){
+		char etoile[REQUEST_MAX]="\n************************************************************\n";
+		if(send(sock , etoile, REQUEST_MAX , 0)==-1) {
+				perror("sendto"); return;
+		}
 	    // Émission du datagramme réponse /
     	if(send(sock , response , REQUEST_MAX , 0)==-1) {
     							perror("sendto"); return;//exit(1);
@@ -1062,6 +1079,10 @@ void envoyerStrucJeu(int sock, Jeu jeu){
 	char c[REQUEST_MAX];
 	strcpy(c,"xJeu");
 
+	/*char etoile[REQUEST_MAX]="\n************************************************************\n";
+	if(send(sock , etoile, REQUEST_MAX , 0)==-1) {
+			perror("sendto"); return;
+	}*/
 	if(send(sock , c, REQUEST_MAX , 0)==-1) {
 		perror("sendto"); return;//exit(1);
 	}
@@ -1117,49 +1138,8 @@ Jeu recupererJeu(int s,struct DeplacementUser * du){
 	if(recv(s , du, sizeof(jeu.client1) , 0)==-1) { //A tester !!
 		perror("recv"); return;//exit(1);
 	}
- 	afficher(jeu);
+ 	//afficher(jeu);
  	return jeu;
-}
-
-void envoyerJeu(int sock, Jeu jeu){ //inutile
-				char c[REQUEST_MAX];
-				int i, j, k;
-				strcat(c," ");
-				for(k = 0; k < 10; k++)
-				{
-					strcat(c," ");
-					char s[5]; // Nombre maximal de chiffres + 1
-			   		sprintf(s, "%d", k);
-					strcat(c,s);
-				}
-				if(send(sock , c, REQUEST_MAX , 0)==-1) {
-						perror("sendto"); return;//exit(1);
-		
-				}
-				memset(c, 0, LINE_MAX);
-				for(i = 0; i < 10; i++){
-					char s[5]; // Nombre maximal de chiffres + 1
-				   	sprintf(s, "%d", i);
-					strcat(c,s);
-					//strcat(c,"\n");
-					for(j = 0; j < 10; j++){
-						if((jeu).tabJeu[i][j].isuse == 1){
-							if((jeu).tabJeu[i][j].piece.numero == 1){
-								// printf("%d %d", i, j);
-								strcat(c,"|x");
-							}
-							else if((jeu).tabJeu[i][j].piece.numero == 2) 
-								strcat(c,"|o");
-						}
-						else strcat(c,"| ");
-					}
-					strcat(c,"| ");
-					if(send(sock , c, REQUEST_MAX , 0)==-1) {
-						perror("sendto"); return;//exit(1);
-		
-					}
-					memset(c, 0, LINE_MAX);
-				}
 }
 
 void misEnPlaceJeu(Jeu *jeu){
@@ -1248,9 +1228,39 @@ void *clientThread(void *socket_c){//struct sockaddr_in src_addr
 	int sock = *(int*)socket_c;
 	int ret;
 	char request[REQUEST_MAX];
+	char saut[REQUEST_MAX]=" ";
+	char etoile[REQUEST_MAX]="************************************************************";
+	char bienv[REQUEST_MAX]="**                   Bienvenue Sur DAMMM  !               **";
+	char commandes[REQUEST_MAX] = "Les Commandes :\n\tlist: lister les joueurs connectés\n\tparties : lister parties en cours\n\tjouer: faire une demande de jeu à un joueur\n\tvoir: regarder une partie en cours\n";
+	char indic[REQUEST_MAX]="Noter l'action à réaliser :";
 	Client elClient;
 
     elClient = connexion(sock);
+    if(send(sock , saut, REQUEST_MAX , 0)==-1) {
+							perror("sendto"); return;
+	}
+    if(send(sock , etoile, REQUEST_MAX , 0)==-1) {
+							perror("sendto"); return;
+	}
+	if(send(sock , etoile, REQUEST_MAX , 0)==-1) {
+							perror("sendto"); return;
+	}
+	if(send(sock , bienv, REQUEST_MAX , 0)==-1) {
+							perror("sendto"); return;
+	}
+	if(send(sock , etoile, REQUEST_MAX , 0)==-1) {
+							perror("sendto"); return;
+	}
+	if(send(sock , etoile, REQUEST_MAX , 0)==-1) {
+							perror("sendto"); return;
+	}
+	if(send(sock , indic, REQUEST_MAX , 0)==-1) {
+							perror("sendto"); return;
+	}
+	if(send(sock , commandes, REQUEST_MAX , 0)==-1) {
+							perror("sendto"); return;
+	}
+
     sauv( &clients,sizeof(clients),&nbClient ,FICHIER_CLIENT);
 
     //afficherTtClients();
@@ -1281,11 +1291,7 @@ void *clientThread(void *socket_c){//struct sockaddr_in src_addr
 			  	return;
 		}
 		if(elClient.isinGame == 1){
-			if(strcmp(request,"jeu") == 0){ //.................INUTILE..........
-				Jeu jeu = getJeu(elClient.nom);
-				envoyerJeu(sock,jeu);
-		   		//strcpy(response,list);
-			}else if(strcmp(request,"xjeu") == 0){
+			if(strcmp(request,"xjeu") == 0){
 				Jeu jeu = getJeu(elClient.nom);
 			    envoyerStrucJeu(sock,jeu);
 			}else if(strcmp(request,"ojeu") == 0){
@@ -1336,7 +1342,7 @@ void *clientThread(void *socket_c){//struct sockaddr_in src_addr
 				}
 
 			}else{
-				printf("(%s) Mauvais requete\n",elClient.nom);
+				//printf("(%s) Mauvais requete: %s\n",elClient.nom,request);
 				//...
 			}
 		}else if(elClient.demandeDeJeu == 1){
@@ -1390,11 +1396,11 @@ void *clientThread(void *socket_c){//struct sockaddr_in src_addr
 //1) sauvegarde des joureur et des jeux (inscription ...)  ?
 //my_struct = malloc(sizeof(t_struct )); -> pour pointeur
 int main(int argc, char **argv){
-	puts("============================================");
-	puts("============================================");
-	puts("\tServeur DAMMM :");
-	puts("============================================");
-	puts("============================================");
+	puts("************************************************************");
+	puts("************************************************************");
+	puts("**                  Serveur DAMMM :                       **");
+	puts("************************************************************");
+	puts("************************************************************");
 	puts("\nClients : ");
 	charge( clients,sizeof(clients),&nbClient ,FICHIER_CLIENT);
 	int i;
@@ -1405,7 +1411,7 @@ int main(int argc, char **argv){
    	}
    	sauv( clients,sizeof(clients),&nbClient ,FICHIER_CLIENT);
    	afficherTtClients();
-	puts("============================================\n");
+	puts("************************************************************");
 	//m = PTHREAD_MUTEX_INITIALIZER;
 	struct sockaddr_in  client;
 	int s, ret, client_sock,lg;

@@ -147,7 +147,7 @@ int init(struct sockaddr_in dst_addr,struct hostent * hostent){
 void afficher(Jeu jeu){
 
 	int i, j, k;
-	printf("   ");
+	printf("\t   ");
 	for(k = 0; k < 10; k++)
 	{
 		printf(" %d", k);
@@ -155,7 +155,7 @@ void afficher(Jeu jeu){
 	printf("\n");
 
 	for(i = 0; i < 10; i++){
-		printf("\n%d  ", i);
+		printf("\n\t%d  ", i);
 		for(j = 0; j < 10; j++){
 			if((jeu).tabJeu[i][j].isuse == 1){
 				if((jeu).tabJeu[i][j].piece.numero == 1){
@@ -556,6 +556,7 @@ void *ecouter(void *sock){
 			strcpy(msg,"TEST1");
 			if(send(s , msg , LINE_MAX , 0)==-1) {
 				perror("sendto"); exit(1);
+				boo = 1;
 			}
 		}
 		if( strncmp(request,"client",10) == 0){ //pour debloquer la boucle principale du serveur
@@ -564,7 +565,7 @@ void *ecouter(void *sock){
 			boo = 1;
 		}
 		
-		if( strncmp(request,"reception demande de jeu",10) == 0){ //inutile
+		if( strncmp(request,"reception demande de jeu",10) == 0){//pour debloquer la boucle principale du serveur
 			strcpy(msg,"TEST2");
 			if(send(s , msg , LINE_MAX , 0)==-1) {
 				perror("sendto"); exit(1);
@@ -580,12 +581,13 @@ void *ecouter(void *sock){
 			while(choix != 0){
 				choix = deplacerAuto(&jeu, client);
 				if(choix == 0){
-					printf("\nDéplacement automatique effectué car vous pouviez manger un pion !\n\n");
+					printf("\nDéplacement automatique effectué car vous pouviez manger un pion !\n");
 				}else{
 					choix = deplacerPion(&jeu, client,&du);
 				}
 			}
 			choix = 1;
+			//printf("\n************************************************************\n");
 			afficher(jeu);
 			if(client.numJeu == 1){
 				jeu.tour = 2;
@@ -603,9 +605,10 @@ void *ecouter(void *sock){
 		}
         if(boo ==0){
             printf("%s\n",request);
+            //printf("\n************************************************************\n");
             boo=0;
         }else{
-            printf("Donnees Reçu !\n");
+            //printf("Donnees Reçu !\n");
         }
    		//clear the message buffer
 		memset(request, 0, LINE_MAX);
@@ -629,7 +632,7 @@ void *emettre(void *sock){
 				printf("\nMessage null !");exit(1);
 		}
 		if(strcmp(msg,"help") ==0){
-				printf("Commande :\nList: lister les joueurs connectés\nparties : lister parties en cours\njouer: faire une demande de jeu à un joueur\nvoir: regarder une partie en cours\n");
+				printf("Commande :\nlist: lister les joueurs connectés\nparties : lister parties en cours\njouer: faire une demande de jeu à un joueur\nvoir: regarder une partie en cours\n");
 				boo =1;
 		}
 		/*if(strcmp(msg,"List") !=0 &&strcmp(msg,"parties") !=0 &&strcmp(msg,"jouer") !=0 &&strcmp(msg,"voir") !=0 ){
@@ -641,6 +644,7 @@ void *emettre(void *sock){
 			perror("sendto"); exit(1);
 			}
             boo=0;
+            printf("************************************************************\n");
         }
 		memset(msg, 0, LINE_MAX);
 		sleep (0.1);
