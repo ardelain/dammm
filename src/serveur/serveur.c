@@ -1242,6 +1242,32 @@ int socketAutreClientJeu(Jeu jeu,char *nom){
 	}
 }
 
+int ifjeuFini(Jeu jeu){
+	int i, j, k;
+	printf("   ");
+	int x=0,o=0;
+	for(i = 0; i < 10; i++){
+		for(j = 0; j < 10; j++){
+			if((jeu).tabJeu[i][j].isuse == 1){
+				if((jeu).tabJeu[i][j].piece.numero == 1){
+					x++;
+				}
+				else if((jeu).tabJeu[i][j].piece.numero == 2) 
+					o++;
+			}
+		}
+	}
+	if(o ==0 || x == 0){
+		if(o ==0 ){
+			return 1;
+		}else{
+			return 2;
+		}
+	}else{
+		return	0;
+	}
+}
+
 
 void *clientThread(void *socket_c){//struct sockaddr_in src_addr
 	int sock = *(int*)socket_c;
@@ -1365,24 +1391,64 @@ void *clientThread(void *socket_c){//struct sockaddr_in src_addr
 				if(boo == 0){
 					struct DeplacementUser d;
 					Jeu j = recupererJeu(sock,&d);
+					
 					//faire si jeu fini..............................................................................................................................
 					//Array[0] = (int*)malloc(sizeof(int) * 12);
 					if(deplacerPion(&jeu, d.numJeu, d.x1, d.y1, d.x2, d.y2)!=1){
-						int nn = getJeuInt(j.client1.nom);
-						pthread_mutex_lock((pthread_mutex_t*)&m);
-						jeux[nn] = jeu;
-						jeux[getJeuInt(elClient.nom)].tour = to;
-						pthread_mutex_unlock((pthread_mutex_t*)&m);
-			    		
-			    		//envoie du jeu a l'adversaire
-			    		envoyerStrucJeu("xJeu",socketAutreClientJeu(jeux[getJeuInt(elClient.nom)],elClient.nom),jeux[getJeuInt(elClient.nom)]);
-						//envoie du jeu au potentiel invite
-			    		int i, j;
-						for(j = 0; j < tabSp[getJeuInt(elClient.nom)].nbSp; j++){
-							if(tabSp[jeux[getJeuInt(elClient.nom)].numero].t[j] != -1){
-			    		 		envoyerStrucJeu("spJeu",tabSp[jeux[getJeuInt(elClient.nom)].numero].t[j],jeux[getJeuInt(elClient.nom)]);
+						int resuJ = 0;
+						if((resuJ= ifjeuFini(jeu) == 0)){//si le jeu n'est pas fini (si il y a encore des pions des deux cotés)
+							int nn = getJeuInt(j.client1.nom);
+							pthread_mutex_lock((pthread_mutex_t*)&m);
+							jeux[nn] = jeu;
+							jeux[getJeuInt(elClient.nom)].tour = to;
+							pthread_mutex_unlock((pthread_mutex_t*)&m);
+				    		
+				    		//envoie du jeu a l'adversaire
+				    		envoyerStrucJeu("xJeu",socketAutreClientJeu(jeux[getJeuInt(elClient.nom)],elClient.nom),jeux[getJeuInt(elClient.nom)]);
+							//envoie du jeu au potentiel invite
+				    		int i, j;
+							for(j = 0; j < tabSp[getJeuInt(elClient.nom)].nbSp; j++){
+								if(tabSp[jeux[getJeuInt(elClient.nom)].numero].t[j] != -1){
+				    		 		envoyerStrucJeu("spJeu",tabSp[jeux[getJeuInt(elClient.nom)].numero].t[j],jeux[getJeuInt(elClient.nom)]);
+								}
+				    		}
+						}else{
+							char gg[REQUEST_MAX];
+							char gg2[REQUEST_MAX];
+							char ggsp[REQUEST_MAX];
+							strcpy(gg2,"Vous avez perdu !! DAAAAAAAM");
+							
+							strcpy(gg,"Vous avez gagné !!");
+							if(resuJ ==1){
+									strcat(ggsp,jeu.client2.nom);
+									strcat(ggsp,"A Gagné");
+									if(send(jeu.client1.addr , gg2, REQUEST_MAX , 0)==-1) {
+										perror("sendto"); return;
+									}
+									if(send(jeu.client2.addr , gg, REQUEST_MAX , 0)==-1) {
+										perror("sendto"); return;
+									}
+							}else{
+									strcat(ggsp,jeu.client1.nom);
+									strcat(ggsp,"A Gagné");
+									if(send(jeu.client1.addr , gg, REQUEST_MAX , 0)==-1) {
+										perror("sendto"); return;
+									}
+									if(send(jeu.client2.addr , gg2, REQUEST_MAX , 0)==-1) {
+										perror("sendto"); return;
+									}
 							}
-			    		}
+
+							int i, j;
+							for(j = 0; j < tabSp[getJeuInt(elClient.nom)].nbSp; j++){
+								if(tabSp[jeux[getJeuInt(elClient.nom)].numero].t[j] != -1){
+				    		 		if(send(sock , ggsp, REQUEST_MAX , 0)==-1) {
+										perror("sendto"); return;
+									}
+								}
+				    		}
+						}
+						
 					}else{
 						printf("(%s) Frauduleux\n",elClient.nom);
 						if(send(sock , cf, REQUEST_MAX , 0)==-1) {

@@ -583,9 +583,9 @@ void *ecouter(void *sock){
 		if( strncmp(request,"xJeu",10) == 0){
 			recupererJeu(s);
 			if(strcmp(client.nom,jeu.client1.nom)==0){
-				printf("\t(Vous êtes les x)");
+				printf("\n\t   (Vous êtes les x)\n");
 			}else{
-				printf("\t(Vous êtes les o)");
+				printf("\n\t   (Vous êtes les o)\n");
 			}
 			choix = 1;
 			struct DeplacementUser du;
