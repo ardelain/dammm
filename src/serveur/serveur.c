@@ -45,6 +45,7 @@ typedef struct Client
 	char nomDemande[30];
 	int numero;
 	int numJeu;
+	int isInvite;
 	int nbParties;
 	int nbPoints;
 	char nom[30];
@@ -67,6 +68,7 @@ typedef struct Cellule
 	int isuse;
 }
 Cellule;
+
 typedef struct
 {
 	int numero;
@@ -78,6 +80,13 @@ typedef struct
 }
 Jeu;
 
+struct DeplacementUser{
+	int numJeu;
+	int x1;
+	int y1;
+	int x2;
+	int y2;
+};
 /***************************************************************************************************************************
 	variable
 ***************************************************************************************************************************/
@@ -93,7 +102,7 @@ int nbClient=0;//nb de client
 struct sockaddr_in addr;
 pthread_t tabthread[100];//client co
 int nbClientCo=0;
-
+int nbInvite=0;
 /***************************************************************************************************************************
 	methode lambda
 ***************************************************************************************************************************/
@@ -167,11 +176,23 @@ void decoClient(char nom[30]){
 */
 void sauv( void* T,int size ,int *nb, char* nomFichier)
 {
+	
+	Client T2[MAX_CLIENTS];
+	int i,j,n=0;
+   	for(i = 0;i<nbClient;i++){
+   		if(clients[i].isInvite!=1){
+   			T2[n] = clients[i];
+   			n++;
+   		}
+   	}
+
 	FILE *fe;
 	fe=fopen(nomFichier,"wb");
+
+	int nn=*nb-nbInvite;	
 	if ( fe == NULL) {printf("\n pb ouverture %s\n", nomFichier);}
-	fwrite(nb,sizeof(int),1,fe);//nb= getlastindex
-	fwrite(T,size,TAILLE,fe);//sauvegarde entier du fichier, voir pour augmenter la taille physique
+	fwrite(&nn,sizeof(int),1,fe);//nb= getlastindex
+	fwrite(T2,size,TAILLE,fe);//sauvegarde entier du fichier, voir pour augmenter la taille physique
 	fclose(fe);
 }
 
@@ -231,68 +252,20 @@ void *emettre(void *sock){
 
 
 
-
-//initialisation du serveur
-int init(struct sockaddr_in addr){
-	int s, ret;
-	int yes = 1;
-	socklen_t len_src_addr;
-	//int s, ret;
-	struct ip_mreqn mreqn;
-	if((s=socket(PF_INET, SOCK_STREAM, 0))==-1) {//AF_INET, SOCK_DGRAM
-	   perror("socket"); exit(1);
-	}
-
-
-	if(setsockopt(s, SOL_SOCKET, SO_REUSEADDR, &yes, sizeof(int)) == -1)
-		perror("setting socket option SO_REUSEADDR" );
-
-	addr.sin_family = AF_INET;
-	addr.sin_port = htons(atoi(PORT));
-	addr.sin_addr.s_addr = 0;//htonl (INADDR_ANY);
-	memset(addr.sin_zero, '\0', sizeof(addr.sin_zero));
-
-	/*
-	if(inet_aton(GROUP, &mreqn.imr_multiaddr)==0) {
-		fprintf(stderr,"Pb Adr multicast : %s !\n", GROUP);
-		exit(1);
-	}
-	mreqn.imr_address.s_addr = htonl(INADDR_ANY);
-	mreqn.imr_ifindex=0; //n'importe quelle interface
-	 
-	if (setsockopt(s, IPPROTO_IP, IP_ADD_MEMBERSHIP, 
-			(void *) &mreqn, sizeof(struct ip_mreqn)) < 0)
-		perror("setsockopt – IP_ADD_MEMBERSHIP");
-	*/
-	
-	if(bind(s, (struct sockaddr *)&addr, sizeof addr)<0) {
-	   perror("bind"); exit(1);
-	}
-	if(listen(s, 3) == -1)
-    {
-      //perror("listen()");
-      //exit(errno);
-    }
-	return s;
-}
-
-void fermeture(){
-
-}
-
-void salleAttente(){
-
-}
 /***************************************************************************************************************************
 	gerer Client
 ***************************************************************************************************************************/
 int verificationConnexion(char *name, char * mdp){
 	int i;
    	for(i = 0;i<nbClient;i++){
-   		if(strcmp(clients[i].nom, name) == 0 && strcmp(clients[i].mdp, mdp) == 0){
+   		if(strcmp(clients[i].nom, name) == 0 && strcmp(clients[i].mdp, mdp) == 0 && clients[i].isCo != 1){
    			clients[i].isCo = 1;
    			return 1;
-   		}
+   		}else{
+			if(strcmp(clients[i].nom, name) == 0 && strcmp(clients[i].mdp, mdp) == 0 && clients[i].isCo == 1){
+				return -1;
+			}
+		}
 	}
    	return 0;
 }
@@ -350,6 +323,8 @@ Client connexion(int sock){
    		puts("ERREUT atoi");
 		return;
 	}
+	Client nvClient;
+	int inscr = 0;
 	memset(request, 0, LINE_MAX);
    	switch (i){
    		case 1://connexion
@@ -382,10 +357,18 @@ Client connexion(int sock){
 				   	}
 					strcpy(mdp,request);
 				   	memset(request, 0, LINE_MAX);
-					if(verificationConnexion(nom, mdp)==0){
-						char mv[REQUEST_MAX]="pb mdp, reesayer (psudo + mdp):";
-						if(send(sock , mv , REQUEST_MAX , 0)==-1) {
+				   	int vari;
+					if((vari = verificationConnexion(nom, mdp))<=0){
+						if(vari == -1 ){
+							char mv[REQUEST_MAX]="Joueur Deja Connecté:";
+							if(send(sock , mv , REQUEST_MAX , 0)==-1) {
 								perror("sendto"); return;//exit(1);
+							}
+						}else{
+							char mv[REQUEST_MAX]="Probleme mdp, reesayer (psudo + mdp):";
+							if(send(sock , mv , REQUEST_MAX , 0)==-1) {
+								perror("sendto"); return;//exit(1);
+							}
 						}
 					}else{
 						char mc[REQUEST_MAX]="Vous etes connecté";
@@ -414,8 +397,7 @@ Client connexion(int sock){
 			
 		case 2://inscription
 			memset(request, 0, LINE_MAX);
-			Client nvClient;
-	   		int inscr = 0;
+
 	   		while(inscr == 0){
 	   			if(send(sock , msg , REQUEST_MAX , 0)==-1) {
 							perror("sendto"); return;//exit(1);
@@ -428,7 +410,6 @@ Client connexion(int sock){
 				   		return;
 				   }
 		   		strcpy(nom,request);
-
 		   		memset(request, 0, LINE_MAX);
 				if(ifaddrClientExist(nom)==0){
 					strcpy(nvClient.nom,nom);
@@ -460,6 +441,54 @@ Client connexion(int sock){
 					envoyerClient(sock,nvClient);
 					printf("Connexion: nom : %s\n",nom);
 					return nvClient;
+				}else{
+					char mv[REQUEST_MAX]="pseudo existant, reesayer :";
+					if(send(sock , mv , REQUEST_MAX , 0)==-1) {
+							perror("sendto"); return;//exit(1);
+					}
+				}
+	   		}
+   		break;
+
+   		case 3://inviter
+   			memset(request, 0, LINE_MAX);
+
+	   		while(inscr == 0){
+	   			if(send(sock , msg , REQUEST_MAX , 0)==-1) {
+							perror("sendto"); return;//exit(1);
+				}
+	   			if((ret=recv(sock , request , REQUEST_MAX , 0))==-1) {
+	    		perror("recvfrom !"); return;//exit(1);
+		   		}
+		   		if(strcmp(request,"")==0){//|| request == NULL || sizeof(request) > 1024
+		   				puts(" inviter strcmp(request,"")==0 : nom");
+				   		return;
+				   }
+		   		strcpy(nom,request);
+
+		   		memset(request, 0, LINE_MAX);
+				if(ifaddrClientExist(nom)==0){
+					strcpy(nvClient.nom,nom);
+				   	char mc[REQUEST_MAX]="Vous etes invité !";
+					if(send(sock , mc , REQUEST_MAX , 0)==-1) {
+							perror("sendto"); return;//exit(1);
+					}
+				   	pthread_mutex_lock((pthread_mutex_t*)&m);
+					strcpy(mdp,request);
+				   	strcpy(nvClient.mdp,mdp);
+				   	nvClient.addr = sock;
+				   	nvClient.isCo = 1; 
+				   	nvClient.isInvite = 1;
+				   	//nvClient.num = nbClient;
+					inscr = 1;
+					memset(request, 0, LINE_MAX);
+					clients[nbClient] = nvClient;
+					pthread_mutex_unlock((pthread_mutex_t*)&m);
+					nbClient++;
+					nbInvite++;
+					envoyerClient(sock,nvClient);
+					printf("Connexion: nom : %s\n",nom);
+					return nvClient;
 
 				}else{
 					char mv[REQUEST_MAX]="pseudo existant, reesayer :";
@@ -467,11 +496,7 @@ Client connexion(int sock){
 							perror("sendto"); return;//exit(1);
 					}
 				}
-
-	   		}
-   		break;
-   		case 3://inviter
-   			//a faire
+			}
    		break;
    		default:
    			
@@ -506,8 +531,6 @@ int  jouerAvecJoueur(int sock,char monnom[30],char nom[30]){
 		char msg[LINE_MAX] ;
 		strcat(msg," (oui/non) accepter de jouer avec  ");
 		strcat(msg, monnom);
-		//puts(monnom);
-		//puts(nom);
    		for(i = 0;i<nbClient;i++){
    			if(strcmp(nom,clients[i].nom)==0 && strcmp(nom,monnom)!=0){
    				clients[i].socketJDemande = sock;
@@ -545,7 +568,7 @@ int getexec(int sock,char *command, char *response, unsigned size,Client client)
 	memset (response, 0, sizeof (response));
 	strcpy(response,"exec !");
 	int boo = 0;
-    /*puts("getexec");
+    /*
     if(send(sock , response , REQUEST_MAX , 0)==-1) {
 							perror("sendto"); return;//exit(1);
 		}*/
@@ -562,7 +585,6 @@ int getexec(int sock,char *command, char *response, unsigned size,Client client)
    		strcpy(response,list);
    		boo=0;
 	}else if(strcmp(command,"jouer") == 0){
-	puts("jouer");
 		char m[REQUEST_MAX] = "avec quel joueur jouer ? : ";
 		if(send(sock , m , REQUEST_MAX , 0)==-1) {
 							perror("sendto"); return;//exit(1);
@@ -611,7 +633,8 @@ int getexec(int sock,char *command, char *response, unsigned size,Client client)
 	   		getexec(sock,command, response, size,client) ;
 	   		return;
     	}*/
-	}else if(strcmp(response,"list parties")==0){
+	}else if(strcmp(response,"parties") == 0){
+		puts("paaa");
    		char list[1024];
 		int i;
 		strcat(list,"jeux : ");
@@ -630,14 +653,12 @@ int getexec(int sock,char *command, char *response, unsigned size,Client client)
 	}/*else if(strcmp(request,"")){
     //.......
     */else{
-        boo = 1;
-        memset(response, 0, LINE_MAX);
+    	strcpy(response,"Mauvaise Commande.");
+        //boo = 1;
+        //memset(response, 0, LINE_MAX);
     }
-
-    puts("jouerAvecJoueur pas null aores");
 	if(boo==0){
 	    // Émission du datagramme réponse /
-	    puts("jouerAvecJoueur pas null aores envoie");
     	if(send(sock , response , REQUEST_MAX , 0)==-1) {
     							perror("sendto"); return;//exit(1);
     	}
@@ -655,6 +676,305 @@ struct source{
 /***************************************************************************************************************************
 	Jeu
 ***************************************************************************************************************************/
+
+void afficher(Jeu jeu){
+
+	int i, j, k;
+	printf("   ");
+	for(k = 0; k < 10; k++)
+	{
+		printf(" %d", k);
+	}
+	printf("\n");
+
+	for(i = 0; i < 10; i++){
+		printf("\n%d  ", i);
+		for(j = 0; j < 10; j++){
+			if((jeu).tabJeu[i][j].isuse == 1){
+				if((jeu).tabJeu[i][j].piece.numero == 1){
+					// printf("%d %d", i, j);
+					printf("|x");
+				}
+				else if((jeu).tabJeu[i][j].piece.numero == 2) 
+					printf("|o");
+			}
+			else printf("| ");
+		}
+		printf("|");
+	}
+	printf("\n");
+}
+
+int nbPionClient(Jeu *jeu, Client c){
+
+	int i, j, nbPion = 0;
+
+	for(i = 0; i < 10; i++){
+		for(j = 0; j < 10; j++){
+			if((*jeu).tabJeu[i][j].isuse == 1){
+				if((*jeu).tabJeu[i][j].piece.numero == c.numero){
+					nbPion = nbPion +1;
+				}
+			}
+		}
+	}
+
+	return nbPion;
+}
+
+int rechercherPionJoueur(Jeu *jeu, int x, int y, int numC){
+
+	int i;
+	//printf("--->%d %d\n",(*jeu).tabJeu[x][y].piece.numero ,numC);
+	if(((*jeu).tabJeu[x][y].isuse == 1) && ((*jeu).tabJeu[x][y].piece.numero == numC)){
+		return 0;
+	}
+
+	else if (((*jeu).tabJeu[x][y].isuse == 1) && ((*jeu).tabJeu[x][y].piece.numero != numC))
+	{
+		return 2;
+	}
+
+	return 1;
+}
+
+int rechercherPionPlateau(Jeu *jeu, int x, int y, int numC){
+
+	int i;
+
+	if(((*jeu).tabJeu[x][y].isuse != 1) && ((*jeu).tabJeu[x][y].isuse != 2)){
+		return 1;
+	}
+
+	return 0;
+}
+
+//contrôle que la case vers où va le pion est libre pour le Joueur1 et le Joueur2
+int deplacement(int numC, int x1, int x2, int y1, int y2){
+	if(numC == 1){
+		if((x2 == x1-1 && y2 == y1+1) || (x2 == x1+1 && y2 == y1+1))
+			return 0;
+	}
+	if(numC == 2){
+		if((x2 == x1-1 && y2 == y1-1) || (x2 == x1+1 && y2 == y1-1))
+			return 0;
+	}
+	return 1;
+}
+
+//contrôle si la case adjacente au pion est libre
+int caseIsLibreManger(Jeu *jeu, int numC, int x1, int x2, int y1, int y2, int *x3, int *y3){
+
+	int p;
+
+	if(x2 == x1-1 && y2 == y1+1){
+		*x3 = x2-1;
+		*y3 = y2+1;
+	}
+	else if(x2 == x1+1 && y2 == y1+1){
+		*x3 = x2+1;
+		*y3 = y2+1;
+	}
+	
+	else if(x2 == x1-1 && y2 == y1-1){
+		*x3 = x2-1;
+		*y3 = y2-1;
+	}
+	else if(x2 == x1+1 && y2 == y1-1){
+		*x3 = x2+1;
+		*y3 = y2-1;
+	}
+	p=rechercherPionPlateau(jeu, *x3, *y3, numC);
+	if(p == 1){
+		return 1;
+	}
+
+	p=rechercherPionJoueur(jeu, *x3, *y3, numC);
+	if(p == 1)
+		return 0;
+	else
+		return 1;
+}
+
+void vider_buffer(void)
+{
+    int c;
+  
+    do {
+        c = getchar();
+    } while (c != '\n' && c != EOF);
+}
+
+int choisirPositionGauche(){
+
+	vider_buffer();
+
+	char pos=""; 
+	int valeur;
+
+	printf("Donnez moi sa position x (abscisse) :\n");
+	scanf("%c", &pos);
+
+	while(sscanf(&pos, "%d", &valeur) != 1){
+		printf("\nEntrez un int pour continuer\n");
+		vider_buffer();
+		
+		printf("Donnez moi sa position x (abscisse) :\n");
+		scanf("%c", &pos);
+	}
+
+	return valeur;
+}
+
+int choisirPositionDroite(){
+
+	vider_buffer();
+
+	char pos=""; 
+	int valeur;
+
+	printf("Donnez moi sa position y (ordonnée) :\n");
+	scanf("%c", &pos);
+
+	while(sscanf(&pos, "%d", &valeur) != 1){
+		printf("\nEntrez un int pour continuer\n");
+		vider_buffer();
+		
+		printf("Donnez moi sa position y (ordonnée) :\n");
+		scanf("%c", &pos);
+	}
+
+	return valeur;
+}
+
+
+void manger(Jeu *jeu, int numC, int x1, int x2, int y1, int y2, int *x3, int *y3){
+
+	(*jeu).tabJeu[x1][y1].isuse = 2;
+	(*jeu).tabJeu[x1][y1].piece.numero = 0;
+	(*jeu).tabJeu[x2][y2].isuse = 2;
+	(*jeu).tabJeu[x2][y2].piece.numero = 0;
+	(*jeu).tabJeu[*x3][*y3].isuse = 1;
+	(*jeu).tabJeu[*x3][*y3].piece.numero = numC;
+}
+
+int mangerAuto(Jeu *jeu, int x1, int x2, int y1, int y2, int numC){
+
+	int p, *x3, *y3;
+
+	if((*jeu).tabJeu[x2][y2].piece.numero == 1 || (*jeu).tabJeu[x2][y2].piece.numero == 2){
+		if((*jeu).tabJeu[x2][y2].isuse == 1 && (*jeu).tabJeu[x2][y2].piece.numero != numC){
+			p=caseIsLibreManger(jeu, numC, x1, x2, y1, y2, &x3, &y3);
+			if(p == 0){
+				manger(jeu, numC, x1, x2, y1, y2, &x3, &y3);
+				return 0;
+			}
+		}
+	}
+
+	return 1;
+}
+
+int deplacerAuto(Jeu *jeu, Client c){
+
+	int i, j, p, x1, x2, y1, y2;
+
+	for(i = 0; i < 10; i++){
+		for(j = 0; j < 10; j++){
+			if((*jeu).tabJeu[i][j].isuse == 1 && (*jeu).tabJeu[i][j].piece.numero == c.numJeu){
+				x1 = i;
+				y1 = j;
+
+				x2 = x1-1;
+				y2 = y1+1;
+				p=mangerAuto(jeu, x1, x2, y1, y2, c.numJeu);
+				if (p == 0)
+				{
+					return 0;
+				}
+
+				x2 = x1+1;
+				y2 = y1+1;
+				p=mangerAuto(jeu, x1, x2, y1, y2, c.numJeu);
+				if (p == 0)
+				{
+					return 0;
+				}
+
+				x2 = x1-1;
+				y2 = y1-1;
+				p=mangerAuto(jeu, x1, x2, y1, y2, c.numJeu);
+				if (p == 0)
+				{
+					return 0;
+				}
+
+				x2 = x1+1;
+				y2 = y1-1;
+				p=mangerAuto(jeu, x1, x2, y1, y2, c.numJeu);
+				if (p == 0)
+				{
+					return 0;
+				}
+			}
+
+		}
+	}
+
+	return 1;
+}
+
+int deplacerPion(Jeu *jeu, int numJeu,int x1,int y1,int x2,int y2){
+	int *x3, *y3, p, d, i;
+	//printf("deplacerPion->> %d",numJeu);
+	p=rechercherPionPlateau(jeu, x1, y1, numJeu);
+	if(p == 1){
+		//printf("\nErreur Jeton hors du plateau\n");
+		return 1;
+	}
+	p=rechercherPionJoueur(jeu, x1, y1, numJeu);
+	if(p == 0){
+		p=rechercherPionPlateau(jeu, x2, y2, numJeu);
+		if(p == 1){
+			//printf("\nErreur Jeton hors du plateau\n");
+			return 1;
+		}
+		p=rechercherPionJoueur(jeu, x2, y2, numJeu);
+		if(p == 1){
+			d=deplacement(numJeu, x1, x2, y1, y2);
+			if(d == 1){
+				//printf("\nDéplacement non valide !\n\n");
+				return 1;
+			}
+			(*jeu).tabJeu[x1][y1].isuse = 2;
+			(*jeu).tabJeu[x1][y1].piece.numero = 0;
+			(*jeu).tabJeu[x2][y2].isuse = 1;
+			(*jeu).tabJeu[x2][y2].piece.numero = numJeu;
+			return 0;
+		}
+		else if(p == 2){
+			p=caseIsLibreManger(jeu, numJeu, x1, x2, y1, y2, &x3, &y3);
+			if(p == 0){
+				manger(jeu, numJeu, x1, x2, y1, y2, &x3, &y3);
+				return 0;
+			}
+			else{
+				//printf("\nDéplacement impossible !\n");
+				return 1;
+			}
+		}
+		else{
+			//printf("\nCette case est occupée !\n\n");
+			return 1;
+		}
+	}
+	else{
+		//printf("Ce n'est pas votre pion !\n");
+		return 1;
+	}
+}
+
+
 Jeu getJeu(char nom[30]){
 	int i;
 	Jeu j;
@@ -675,6 +995,8 @@ int getJeuInt(char nom[30]){
    	}
    	return -1;
 }
+
+/*
 void afficher(Jeu jeu){
 	int i, j, k;
 	printf("   ");
@@ -701,6 +1023,7 @@ void afficher(Jeu jeu){
 	}
 	printf("\n");
 }
+*/
 
 char * charJeu(Jeu *jeu){
 	char * c;//char *c;
@@ -770,7 +1093,8 @@ void envoyerStrucJeu(int sock, Jeu jeu){
 	}
 }
 
-Jeu recupererJeu(int s){
+
+Jeu recupererJeu(int s,struct DeplacementUser * du){
 	Jeu jeu;
 	int i,j;
 	if(recv(s , &jeu.client1, sizeof(jeu.client1) , 0)==-1) {
@@ -787,7 +1111,11 @@ Jeu recupererJeu(int s){
 			if(recv(s ,&jeu.tabJeu[i][j], sizeof(jeu.tabJeu[i][j]) , 0)==-1) {
 				perror("recv"); return;//exit(1);
 			}
+			//printf("%d\n",jeu.tabJeu[i]->piece.numero);
 		}
+	}
+	if(recv(s , du, sizeof(jeu.client1) , 0)==-1) { //A tester !!
+		perror("recv"); return;//exit(1);
 	}
  	afficher(jeu);
  	return jeu;
@@ -914,6 +1242,8 @@ int socketAutreClientJeu(Jeu jeu,char *nom){
 		return jeu.client1.addr;
 	}
 }
+
+
 void *clientThread(void *socket_c){//struct sockaddr_in src_addr
 	int sock = *(int*)socket_c;
 	int ret;
@@ -950,9 +1280,8 @@ void *clientThread(void *socket_c){//struct sockaddr_in src_addr
 			    }
 			  	return;
 		}
-		//printf("(%s %d)\n",elClient.nom,elClient.isinGame);
 		if(elClient.isinGame == 1){
-			if(strcmp(request,"jeu") == 0){
+			if(strcmp(request,"jeu") == 0){ //.................INUTILE..........
 				Jeu jeu = getJeu(elClient.nom);
 				envoyerJeu(sock,jeu);
 		   		//strcpy(response,list);
@@ -962,39 +1291,57 @@ void *clientThread(void *socket_c){//struct sockaddr_in src_addr
 			}else if(strcmp(request,"ojeu") == 0){
 				Jeu jeu = getJeu(elClient.nom);
 				char ct[REQUEST_MAX]="Tour au joueur adverse";
-				if(jeu.tour == 1){ //on verifie que c'est bien son tour
+				char cf[REQUEST_MAX]="Vous etes inconnu et/ou frauduleux";
+				char cnom[100];
+				int to;
+				int  boo = 0;
+				char elnom[30];
+				if(jeu.tour == 1){ //on verifie que c'est bien son tour (et si c'est bien lui)
 					if(strcmp(elClient.nom,jeu.client1.nom)==0){
-						jeux[getJeuInt(elClient.nom)] = recupererJeu(sock);
-						jeux[getJeuInt(elClient.nom)].tour = 2;
-			    		envoyerStrucJeu(socketAutreClientJeu(jeux[getJeuInt(elClient.nom)],elClient.nom),jeux[getJeuInt(elClient.nom)]);///jeux[getJeuInt(elClient.nom)].client2.addr
-					//..........................................................................................................
+						to = 2;
+						strcpy(elnom, jeu.client1.nom);
 					}else{
-						puts("Mauvais Tour");
+						printf("(%s) Mauvais Tour\n",elClient.nom);
 						if(send(sock , ct, REQUEST_MAX , 0)==-1) {
-							perror("sendto"); return;//exit(1);
+							perror("sendto"); return;
 						}
+						boo = 1;
 					}
 				}else{
 					if(strcmp(elClient.nom,jeu.client2.nom)==0){
-						jeux[getJeuInt(elClient.nom)] = recupererJeu(sock);
-						jeux[getJeuInt(elClient.nom)].tour = 1;
-			    		envoyerStrucJeu(socketAutreClientJeu(jeux[getJeuInt(elClient.nom)],elClient.nom),jeux[getJeuInt(elClient.nom)]);		
-			    		//..........................................................................................................				
+						to = 1;
+						strcpy(elnom, jeu.client2.nom);
 					}else{
 					    printf("(%s) Mauvais Tour\n",elClient.nom);
 						if(send(sock , ct, REQUEST_MAX , 0)==-1) {
-							perror("sendto"); return;//exit(1);
+							perror("sendto"); return;
+						}
+						boo = 1;
+					}
+				}
+				if(boo == 0){
+					struct DeplacementUser d;
+					Jeu j = recupererJeu(sock,&d);
+					if(deplacerPion(&jeu, d.numJeu, d.x1, d.y1, d.x2, d.y2)!=1){
+						int nn = getJeuInt(j.client1.nom);
+						jeux[nn] = jeu;
+						jeux[getJeuInt(elClient.nom)].tour = to;
+			    		envoyerStrucJeu(socketAutreClientJeu(jeux[getJeuInt(elClient.nom)],elClient.nom),jeux[getJeuInt(elClient.nom)]);
+					}else{
+						printf("(%s) Frauduleux\n",elClient.nom);
+						if(send(sock , cf, REQUEST_MAX , 0)==-1) {
+							perror("sendto"); return;
 						}
 					}
 				}
+
 			}else{
 				printf("(%s) Mauvais requete\n",elClient.nom);
 				//...
 			}
 		}else if(elClient.demandeDeJeu == 1){
 			if(strcmp(request,"oui")==0){//|| request == NULL || sizeof(request) > 1024
-			   		puts(" jouerAvecJoueur ACCEPT ");
-
+			   		//puts(" jouerAvecJoueur ACCEPT ");
 			   		clients[getClientIt(elClient.nom)].demandeDeJeu = 0; 
 			   		/*
 			   		struct source cl;
@@ -1037,9 +1384,6 @@ void *clientThread(void *socket_c){//struct sockaddr_in src_addr
 
 }
 
-
-
-
 /***************************************************************************************************************************
 	main
 ***************************************************************************************************************************/
@@ -1053,8 +1397,6 @@ int main(int argc, char **argv){
 	puts("============================================");
 	puts("\nClients : ");
 	charge( clients,sizeof(clients),&nbClient ,FICHIER_CLIENT);
-	afficherTtClients();
-
 	int i;
    	for(i = 0;i<nbClient;i++){
    		clients[i].isinGame = 0;
@@ -1062,6 +1404,7 @@ int main(int argc, char **argv){
    		clients[i].isCo = 0;
    	}
    	sauv( clients,sizeof(clients),&nbClient ,FICHIER_CLIENT);
+   	afficherTtClients();
 	puts("============================================\n");
 	//m = PTHREAD_MUTEX_INITIALIZER;
 	struct sockaddr_in  client;
@@ -1073,7 +1416,6 @@ int main(int argc, char **argv){
 	if((s=socket(PF_INET, SOCK_STREAM, 0))==-1) {//AF_INET, SOCK_DGRAM
 	   perror("socket"); exit(1);
 	}
-
 
 	if(setsockopt(s, SOL_SOCKET, SO_REUSEADDR, &yes, sizeof(int)) == -1)
 		perror("setting socket option SO_REUSEADDR" );
