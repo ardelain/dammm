@@ -181,7 +181,6 @@ void decoClient(char nom[30]){
    			//return;
    		}
    	}
-   	//puts("isinGame");
    	if(c.isinGame == 1){
    		for(i = 0;i<nbJeux;i++){
    			Jeu jeu = jeux[i];
