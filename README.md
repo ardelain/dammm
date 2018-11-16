@@ -35,10 +35,10 @@ Déroulement du  programme cote client : (apres avoir rentrer l'adresse ip)</br>
 
 3) lors d'un partie:</br>
 		on nous indique si c'est notre tour et on nous indique la demarche pour selectionner un pion (numero abcysse et ordonné)</br>
-		-> quand on a joué on envoie les information du "nouveau" plateau au serveur ainsi que les différentes valeurs de notre mouvement; cela afin que le serveur rejout le tour et verifie son integrité (il verifie aussi l'identité de l'envoyeur et bloque les probèmes (mauvais client, pas sont tour, mauvais mouvement,...))</br>
+		-> quand on a joué on envoie les informations du "nouveau" plateau au serveur ainsi que les différentes valeurs de notre mouvement; cela afin que le serveur rejout le tour et verifie son integrité (il verifie aussi l'identité de l'envoyeur et bloque les probèmes (mauvais client, pas sont tour, mauvais mouvement,...))</br>
 
-4) on peu regardé une partie et partir quand on le souhaite (commande : voir   / quitter)</br>
+4) on peut regardé une partie et partir quand on le souhaite (commande : voir   / quitter)</br>
 
 
 
-L'implementation du jeu de damme n'est pas integré en totalité, mais toutes les regle et methode restante sont dans methodedeJeux.c (je le jeu reste optionnel) 
+L'implementation du jeu de damme n'est pas integré en totalité, mais toutes les regles et methodes restante sont dans methodedeJeux.c (je le jeu reste optionnel) 
