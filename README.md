@@ -41,4 +41,4 @@ Déroulement du  programme cote client : (apres avoir rentrer l'adresse ip)</br>
 
 
 
-L'implementation du jeu de damme n'est pas integré en totalité, mais toutes les regles et methodes restante sont dans methodedeJeux.c (je le jeu reste optionnel) 
+L'implementation du jeu de damme n'est pas integré en totalité, mais toutes les regles et methodes restantent sont dans methodedeJeux.c (je le jeu reste optionnel) 
