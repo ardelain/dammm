@@ -87,6 +87,7 @@ struct DeplacementUser{
 	int y1;
 	int x2;
 	int y2;
+	int isAuto;
 };
 
 struct Spc{//pour le controle spectateur
@@ -593,27 +594,27 @@ void envoyerStrucJeu(char *pre,int sock, Jeu jeu){
 	if(send(sock , c, REQUEST_MAX , 0)==-1) {
 		perror("sendto"); return;//exit(1);
 	}
-	sleep(0.1);
+	sleep(1);
 	//puts("1");
 	if(send(sock , &jeu.client1, sizeof(jeu.client1) , 0)==-1) {
 		perror("sendto"); return;//exit(1);
 	}
-	sleep(0.1);
+	sleep(1);
 	//puts("2");
 	if(send(sock , &jeu.client2, sizeof(jeu.client2) , 0)==-1) {
 		perror("sendto"); return;//exit(1);
 	}
-	sleep(0.1);
+	sleep(1);
 	//puts("3");
 	if(send(sock , &jeu.tabP, sizeof(jeu.tabP) , 0)==-1) {
 		perror("sendto"); return;//exit(1);
 	}
-	sleep(0.1);
+	sleep(1);
 	//puts("4");
 	for(i = 0; i < 10; i++){
-		sleep(0.1);
+		sleep(0.5);
 		for(j = 0; j < 10; j++){
-			sleep(0.1);
+			sleep(0.5);
 			if(send(sock ,&jeu.tabJeu[i][j], sizeof(jeu.tabJeu[i][j]) , 0)==-1) {
 				perror("sendto"); return;//exit(1);
 			}
@@ -950,19 +951,19 @@ int mangerAuto(Jeu *jeu, int x1, int x2, int y1, int y2, int numC){
 	return 1;
 }
 
-int deplacerAuto(Jeu *jeu, Client c){
+int deplacerAuto(Jeu *jeu, int numJeu, int x1,int x2,int y1,int y2){
 
-	int i, j, p, x1, x2, y1, y2;
+	int i, j, p;
 
 	for(i = 0; i < 10; i++){
 		for(j = 0; j < 10; j++){
-			if((*jeu).tabJeu[i][j].isuse == 1 && (*jeu).tabJeu[i][j].piece.numero == c.numJeu){
+			if((*jeu).tabJeu[i][j].isuse == 1 && (*jeu).tabJeu[i][j].piece.numero == numJeu){
 				x1 = i;
 				y1 = j;
 
 				x2 = x1-1;
 				y2 = y1+1;
-				p=mangerAuto(jeu, x1, x2, y1, y2, c.numJeu);
+				p=mangerAuto(jeu, x1, x2, y1, y2, numJeu);
 				if (p == 0)
 				{
 					return 0;
@@ -970,7 +971,7 @@ int deplacerAuto(Jeu *jeu, Client c){
 
 				x2 = x1+1;
 				y2 = y1+1;
-				p=mangerAuto(jeu, x1, x2, y1, y2, c.numJeu);
+				p=mangerAuto(jeu, x1, x2, y1, y2, numJeu);
 				if (p == 0)
 				{
 					return 0;
@@ -978,7 +979,7 @@ int deplacerAuto(Jeu *jeu, Client c){
 
 				x2 = x1-1;
 				y2 = y1-1;
-				p=mangerAuto(jeu, x1, x2, y1, y2, c.numJeu);
+				p=mangerAuto(jeu, x1, x2, y1, y2, numJeu);
 				if (p == 0)
 				{
 					return 0;
@@ -986,7 +987,7 @@ int deplacerAuto(Jeu *jeu, Client c){
 
 				x2 = x1+1;
 				y2 = y1-1;
-				p=mangerAuto(jeu, x1, x2, y1, y2, c.numJeu);
+				p=mangerAuto(jeu, x1, x2, y1, y2, numJeu);
 				if (p == 0)
 				{
 					return 0;
@@ -1402,7 +1403,14 @@ void *clientThread(void *socket_c){//struct sockaddr_in src_addr
 					
 					//faire si jeu fini..............................................................................................................................
 					//Array[0] = (int*)malloc(sizeof(int) * 12);
-					if(deplacerPion(&jeu, d.numJeu, d.x1, d.y1, d.x2, d.y2)!=1){
+					int deplacement;
+					if(d.isAuto == 1){
+							deplacement =  deplacerAuto(&jeu, d.numJeu, d.x1, d.y1, d.x2, d.y2);
+					}else{
+						deplacement =  deplacerPion(&jeu, d.numJeu, d.x1, d.y1, d.x2, d.y2);
+					}
+					
+					if(deplacement!=1){
 						int resuJ = 0;
 						if((resuJ= ifjeuFini(jeu) == 0)){//si le jeu n'est pas fini (si il y a encore des pions des deux cotés)
 							int nn = getJeuInt(j.client1.nom);

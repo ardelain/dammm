@@ -69,6 +69,7 @@ struct DeplacementUser{
 	int y1;
 	int x2;
 	int y2;
+	int isAuto;
 };
 
 /***************************************************************************************************************************
@@ -113,16 +114,11 @@ int init(struct sockaddr_in dst_addr,struct hostent * hostent){
 	if((hostent=gethostbyname(ip))==NULL) {
 		herror("gethostbyname"); exit(1);
 	}
-	
-	
-	if((hostent=gethostbyname(GROUP))==NULL) {
-		herror("gethostbyname"); exit(1);
-	}
 
 	dst_addr.sin_family = AF_INET;
 	dst_addr.sin_port = htons(atoi(PORT));  
 	//dst_addr.sin_addr = *((struct in_addr *)hostent->h_addr);
-	if (!inet_aton((const char*)GROUP,&dst_addr.sin_addr)){
+	if (!inet_aton((const char*)ip,&dst_addr.sin_addr)){
 		perror("inetaton");//sin.sin_addr.s_addr=0;perror("inet_aton"); exit(1);		
 	}
 	memset(dst_addr.sin_zero, '\0', sizeof(dst_addr.sin_zero));
@@ -525,33 +521,32 @@ void envoyerStrucJeu(int sock, Jeu jeu,struct DeplacementUser du){
 	int i,j;
 	char c[REQUEST_MAX];
 	strcpy(c,"ojeu");
-
 	if(send(sock , c, REQUEST_MAX , 0)==-1) {
 		perror("sendto"); return;//exit(1);
 	}
 
-	sleep (0.1);
+	sleep (1);
 	if(send(sock , &jeu.client1, sizeof(jeu.client1) , 0)==-1) {
 		perror("sendto"); return;//exit(1);
 	}
-	sleep (0.1);
+	sleep (1);
 	if(send(sock , &jeu.client2, sizeof(jeu.client2) , 0)==-1) {
 		perror("sendto"); return;//exit(1);
 	}
-	sleep (0.1);
+	sleep (1);
 	if(send(sock , &jeu.tabP, sizeof(jeu.tabP) , 0)==-1) {
 		perror("sendto"); return;//exit(1);
 	}
-	sleep (0.1);
+	sleep (1);
 	for(i = 0; i < 10; i++){
 		for(j = 0; j < 10; j++){
 			if(send(sock ,&jeu.tabJeu[i][j], sizeof(jeu.tabJeu[i][j]) , 0)==-1) {
 				perror("sendto"); return;//exit(1);
 			}
-			sleep(0.1);
+			sleep(0.5);
 		}
 	}
-	sleep (0.1);
+	sleep (1);
 	if(send(sock , &du, sizeof(du) , 0)==-1) {
 		perror("sendto"); return;//exit(1);
 	}
@@ -575,6 +570,7 @@ void *ecouter(void *sock){
 				exit(0);
 		}
 		if( strncmp(request," (oui/non)",10) == 0){ //pour debloquer la boucle principale du serveur
+			memset(msg, 0, LINE_MAX);
 			strcpy(msg,"TEST1");
 			if(send(s , msg , LINE_MAX , 0)==-1) {
 				perror("sendto"); exit(1);
@@ -588,6 +584,7 @@ void *ecouter(void *sock){
 		}
 		
 		if( strncmp(request,"reception demande de jeu",10) == 0){//pour debloquer la boucle principale du serveur
+			memset(msg, 0, LINE_MAX);
 			strcpy(msg,"TEST2");
 			if(send(s , msg , LINE_MAX , 0)==-1) {
 				perror("sendto"); exit(1);
@@ -614,9 +611,11 @@ void *ecouter(void *sock){
 			while(choix != 0){
 				choix = deplacerAuto(&jeu, client,&du);
 				if(choix == 0){
+					du.isAuto=1;
 					printf("\nDéplacement automatique effectué car vous pouviez manger un pion !\n");
 				}else{
 					choix = deplacerPion(&jeu, client,&du);
+					du.isAuto=0;
 				}
 			}
 			choix = 1;
@@ -628,12 +627,14 @@ void *ecouter(void *sock){
 			}else{
 				jeu.tour = 1;
 			}
+			memset(msg, 0, LINE_MAX);
 			strcpy(msg,"ELTEST");
 			if(send(s , msg , LINE_MAX , 0)==-1) {//pour update le client du serveur
 				perror("sendto"); exit(1);
 			}
 			//printf("->%d %d %d %d %d\n", du.numJeu, du.x1, du.y1, du.x2, du.y2);
 			envoyerStrucJeu(s,jeu,du);
+			puts("envoyé");
 			memset(request, 0, LINE_MAX);
 			boo = 1;
 		}
